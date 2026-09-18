@@ -1,0 +1,6 @@
+spring.datasource.url=jdbc:postgresql://host:port/db
+spring.datasource.username=user
+spring.datasource.password=password
+spring.jpa.hibernate.ddl-auto=update
+
+spring.security.oauth2.resourceserver.jwt.issuer-uri=keycloakHost/realms/realmId

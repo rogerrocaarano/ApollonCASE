@@ -1,0 +1,8 @@
+package com.rocayasociados.extensionbackend.users
+
+import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
+
+interface UsersRepository : JpaRepository<User, UUID> {
+    fun findByKeycloakId(keycloakId: String): User?
+}
