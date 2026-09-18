@@ -1,0 +1,211 @@
+import { test, expect, type Page, type Locator } from "@playwright/test"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import { fileURLToPath } from "node:url"
+import { waitForCanvasReady, openFixtureInLocalEditor } from "../helpers/canvas"
+
+const __filename2 = fileURLToPath(import.meta.url)
+const __dirname2 = path.dirname(__filename2)
+const classDiagram = JSON.parse(
+  fs.readFileSync(
+    path.join(__dirname2, "..", "fixtures", "class-diagram.json"),
+    "utf-8"
+  )
+) as Record<string, unknown>
+
+const BIDIRECTIONAL = "edge-bidirectional-dog-imovable"
+const INHERITANCE = "edge-inheritance-dog-animal"
+
+function edgeById(page: Page, id: string): Locator {
+  return page.locator(`.react-flow__edge[data-id="${id}"]`)
+}
+
+/** Select an edge so its bend/endpoint handles render. Clicks a point ON the path
+ * (its arc-length midpoint) rather than the element's bounding-box centre: for a
+ * bent/L-shaped edge the bbox centre sits in empty space off the line, so a
+ * force-click there misses the overlay stroke and fails to select. An on-path click
+ * is how a user actually selects the edge and is robust to routing shape. */
+async function selectEdge(page: Page, id: string): Promise<Locator> {
+  const edge = edgeById(page, id)
+  const pt = await page.evaluate((eid) => {
+    const p = document.querySelector(
+      `.react-flow__edge[data-id="${eid}"] path.react-flow__edge-path`
+    ) as SVGPathElement | null
+    if (!p) return null
+    const ctm = p.getScreenCTM()
+    if (!ctm) return null
+    const q = p.getPointAtLength(p.getTotalLength() / 2)
+    const m = new DOMPoint(q.x, q.y).matrixTransform(ctm)
+    return { x: m.x, y: m.y }
+  }, id)
+  if (!pt) throw new Error(`edge ${id} path not found for selection`)
+  await page.mouse.click(pt.x, pt.y)
+  await expect(edge).toHaveClass(/selected/)
+  return edge
+}
+
+function mainPathD(edge: Locator): Promise<string | null> {
+  return edge.locator(".react-flow__edge-path").first().getAttribute("d")
+}
+
+async function persistedConnection(page: Page, edgeId: string) {
+  return page.evaluate((id) => {
+    const raw = localStorage.getItem("persistenceModelStore")
+    if (!raw) return null
+    const state = JSON.parse(raw).state
+    const edge = state.models[state.currentModelId]?.model?.edges?.find(
+      (candidate: { id: string }) => candidate.id === id
+    )
+    return edge
+      ? {
+          source: edge.source,
+          target: edge.target,
+          sourceAnchor: edge.data?.sourceAnchor ?? null,
+        }
+      : null
+  }, edgeId)
+}
+
+/** Drag the centre of a handle by (dx,dy) screen px and let the commit settle. */
+async function dragBy(
+  page: Page,
+  handle: Locator,
+  dx: number,
+  dy: number
+): Promise<void> {
+  const box = await handle.boundingBox()
+  if (!box) throw new Error("handle has no bounding box")
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+  await page.mouse.move(cx, cy)
+  await page.mouse.down()
+  await page.mouse.move(cx + dx, cy + dy, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(350)
+}
+
+/** Orientation of a bend handle: H handles are wide (drag vertically). */
+async function isHorizontal(handle: Locator): Promise<boolean> {
+  const box = await handle.boundingBox()
+  if (!box) throw new Error("handle has no bounding box")
+  return box.width > box.height
+}
+
+test.beforeEach(async ({ page }) => {
+  await openFixtureInLocalEditor(page, classDiagram)
+  await waitForCanvasReady(page)
+})
+
+test.describe("Edge bend (waypoint) dragging", () => {
+  test("dragging an inner segment bends the edge and the bend persists on release", async ({
+    page,
+  }) => {
+    const edge = await selectEdge(page, BIDIRECTIONAL)
+    const handle = edge.locator(".edge-bend-handle").first()
+    await expect(handle).toBeVisible()
+
+    const before = await mainPathD(edge)
+    const horizontal = await isHorizontal(handle)
+    // Drag well clear of the cleanup threshold so the bend is unambiguous.
+    await dragBy(page, handle, horizontal ? 0 : 40, horizontal ? 40 : 0)
+
+    const after = await mainPathD(edge)
+    expect(after, "edge path changed").not.toEqual(before)
+    // Re-read after a further tick: the committed geometry must not revert.
+    await page.waitForTimeout(200)
+    expect(await mainPathD(edge), "bend persisted").toEqual(after)
+  })
+
+  test("a single grid-step bend does not snap back (regression)", async ({
+    page,
+  }) => {
+    // Regression guard: a one-grid-step (5px) bend on a terminal segment used
+    // to be flattened by the dogleg-cleanup pass and snap back to a straight
+    // line on release. It must now persist.
+    const edge = await selectEdge(page, BIDIRECTIONAL)
+    const handles = edge.locator(".edge-bend-handle")
+    await expect(handles.first()).toBeVisible()
+    // The second handle covers the target-terminal segment (the case that
+    // previously regressed).
+    const handle = handles.nth((await handles.count()) - 1)
+    const before = await mainPathD(edge)
+    const horizontal = await isHorizontal(handle)
+    await dragBy(page, handle, horizontal ? 0 : 8, horizontal ? 8 : 0)
+
+    expect(
+      await mainPathD(edge),
+      "small bend was discarded / snapped back"
+    ).not.toEqual(before)
+  })
+})
+
+test.describe("Edge endpoint reconnection", () => {
+  test("rewiring one endpoint leaves the untouched endpoint under the same routing authority", async ({
+    page,
+  }) => {
+    const edge = await selectEdge(page, BIDIRECTIONAL)
+    const target = edge.locator(".edge-endpoint-handle--target")
+    await expect(target).toBeVisible()
+
+    const totalBefore = await page.locator(".react-flow__edge").count()
+    const connectionBefore = await persistedConnection(page, BIDIRECTIONAL)
+    expect(connectionBefore).not.toBeNull()
+
+    // A different class node to reconnect onto (node index 5 = far-right class).
+    const dest = page.locator(".react-flow__node").nth(5)
+    const destBox = (await dest.boundingBox())!
+    const tBox = (await target.boundingBox())!
+    await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + tBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(
+      destBox.x + destBox.width / 2,
+      destBox.y + destBox.height / 2,
+      { steps: 16 }
+    )
+    await page.mouse.up()
+
+    await expect(edgeById(page, BIDIRECTIONAL)).toHaveCount(1)
+    expect(await page.locator(".react-flow__edge").count()).toEqual(totalBefore)
+    await expect
+      .poll(() => persistedConnection(page, BIDIRECTIONAL))
+      .toMatchObject({
+        source: connectionBefore!.source,
+        sourceAnchor: connectionBefore!.sourceAnchor,
+      })
+    expect((await persistedConnection(page, BIDIRECTIONAL))?.target).not.toBe(
+      connectionBefore!.target
+    )
+  })
+})
+
+test.describe("Zoom-adaptive bend handles", () => {
+  test("zooming in reveals more bend handles and never hides them", async ({
+    page,
+  }) => {
+    // Handle availability is judged on the segment's ON-SCREEN length, so
+    // zooming in can only add handles (a shorter segment crosses the size
+    // budget), never remove them. The short inheritance edge gains handles as
+    // it is zoomed in.
+    const atZoom1 = await selectEdge(page, INHERITANCE)
+    const countAtZoom1 = await atZoom1.locator(".edge-bend-handle").count()
+
+    const zoomIn = page.getByRole("button", { name: "Zoom in" })
+    for (let i = 0; i < 5; i++) {
+      await zoomIn.click()
+      await page.waitForTimeout(60)
+    }
+
+    // The edge stays selected across zoom, so re-read its handles directly.
+    // (Re-clicking would target the edge's on-screen position, which the
+    // center-anchored zoom-in can pan out of view.)
+    const zoomed = edgeById(page, INHERITANCE)
+    const countZoomed = await zoomed.locator(".edge-bend-handle").count()
+
+    // Monotonic: never fewer than at 1x, and at least one once zoomed in.
+    expect(countZoomed).toBeGreaterThanOrEqual(countAtZoom1)
+    expect(
+      countZoomed,
+      "zoom-in should expose at least one bend handle"
+    ).toBeGreaterThan(0)
+  })
+})

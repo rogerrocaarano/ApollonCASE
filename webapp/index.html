@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/assets/images/tum-logo-32x32.png"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <script>
+      (function () {
+        try {
+          var rawTheme = window.localStorage.getItem("apollon-theme");
+          var storedTheme = rawTheme ? JSON.parse(rawTheme).state : null;
+          var theme =
+            storedTheme &&
+            (storedTheme.userThemePreference || storedTheme.currentTheme);
+
+          if (theme !== "dark" && theme !== "light") {
+            theme =
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          }
+
+          document.documentElement.setAttribute("data-theme", theme);
+          document.documentElement.style.colorScheme = theme;
+        } catch (error) {
+          document.documentElement.setAttribute("data-theme", "light");
+          document.documentElement.style.colorScheme = "light";
+        }
+      })();
+    </script>
+    <link href="/src/webapp.css" rel="stylesheet" />
+
+    <title>Apollon</title>
+    <!-- Runtime env written by the container entrypoint. 404-tolerant in dev. -->
+    <script src="/env.js" defer></script>
+  </head>
+  <body>
+    <div id="root">
+      <div
+        class="app-loading-screen app-loading-screen--boot"
+        role="status"
+        aria-label="Loading workspace..."
+        aria-live="polite"
+      >
+        <div class="app-loading-content">
+          <div class="app-loading-logo-shell">
+            <img
+              class="app-loading-logo"
+              src="/assets/images/tum-logo.png"
+              alt="TUM logo"
+              width="108"
+              height="54"
+            />
+          </div>
+          <span class="app-loading-progress" aria-hidden="true"></span>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

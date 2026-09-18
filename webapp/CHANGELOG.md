@@ -1,0 +1,191 @@
+# @tumaet/webapp
+
+## 5.3.0
+
+### Minor Changes
+
+- [#841](https://github.com/ls1intum/Apollon/pull/841) [`8e88cb2`](https://github.com/ls1intum/Apollon/commit/8e88cb2988a8ad6c9b3dedd763e0fd03f31af5c4) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Test embedded-editor overlays and drag interactions directly in the playground with its new fullscreen workspace action.
+
+### Patch Changes
+
+- Updated dependencies [[`dc7f071`](https://github.com/ls1intum/Apollon/commit/dc7f071a1998cdab30f33a15db5ee4400c341732), [`8e88cb2`](https://github.com/ls1intum/Apollon/commit/8e88cb2988a8ad6c9b3dedd763e0fd03f31af5c4)]:
+  - @tumaet/apollon@5.3.0
+
+## 5.2.0
+
+### Minor Changes
+
+- [#817](https://github.com/ls1intum/Apollon/pull/817) [`5d90428`](https://github.com/ls1intum/Apollon/commit/5d9042806b5052c68722c323bc0475488c459568) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Drag a `.json` diagram exported from Apollon anywhere onto the app to import it — it opens as a new diagram, leaving whatever you had open untouched. A drop overlay confirms the target, and the File-menu "Import" item takes the same path.
+
+- [#817](https://github.com/ls1intum/Apollon/pull/817) [`5d90428`](https://github.com/ls1intum/Apollon/commit/5d9042806b5052c68722c323bc0475488c459568) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Saves the diagram as a JSON file with Ctrl/Cmd+S, instead of the browser offering to save the page. Ctrl/Cmd+Shift+S now writes a version to history straight away — it used to only open the panel. The "How to use this editor?" dialog lists every shortcut with the keys your own keyboard prints — ⌘⇧Z on a Mac, Ctrl+Shift+Z everywhere else — and its viewport tips now match what the canvas does: scroll or drag pans, Ctrl/Cmd+scroll zooms.
+
+### Patch Changes
+
+- [#826](https://github.com/ls1intum/Apollon/pull/826) [`991d9c1`](https://github.com/ls1intum/Apollon/commit/991d9c1b3ab8404f2d9564e6ecdefd9e0d9a0bbb) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Start every bundled design-pattern template in a clean, visually balanced editing state, with stable shared hierarchy trunks and automatic routing preserved for associations.
+
+- [#821](https://github.com/ls1intum/Apollon/pull/821) [`d04150a`](https://github.com/ls1intum/Apollon/commit/d04150a3967e3e9f1c5a519cb248fc23e2a123ff) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - No visible change to the editor. Under the hood, the web app's version
+  history — the list, version snapshots, and saving/renaming/deleting/restoring
+  versions — now runs through one shared data layer instead of hand-written
+  fetching, so the version panel refreshes and reconciles more consistently
+  across tabs and collaborators.
+
+- [#780](https://github.com/ls1intum/Apollon/pull/780) [`dcc7af1`](https://github.com/ls1intum/Apollon/commit/dcc7af114d9131d648ed7156a6eec8a35c999a09) Thanks [@tamang29](https://github.com/tamang29)! - Rebuild the iPhone and iPad app on the redesigned editor with the familiar Apollon branding, and stop the web app from loading its font from Google — it is now self-hosted.
+
+- Updated dependencies [[`f7fd4a5`](https://github.com/ls1intum/Apollon/commit/f7fd4a58f32aec0b8442ba501d9304d2f98b5983), [`25b2e47`](https://github.com/ls1intum/Apollon/commit/25b2e47f649861254a0e770edb52582a793b0ece), [`1ed1d1e`](https://github.com/ls1intum/Apollon/commit/1ed1d1e002dcf91bbfc770dec1cfff1a673f1591), [`5d90428`](https://github.com/ls1intum/Apollon/commit/5d9042806b5052c68722c323bc0475488c459568), [`1eaf5be`](https://github.com/ls1intum/Apollon/commit/1eaf5be6a4a7e69c3fc40f79a247b5d7c731caf4), [`75769ce`](https://github.com/ls1intum/Apollon/commit/75769ce4010707154d5dc7dd94b0bad4cb069965), [`f7fd4a5`](https://github.com/ls1intum/Apollon/commit/f7fd4a58f32aec0b8442ba501d9304d2f98b5983), [`512affe`](https://github.com/ls1intum/Apollon/commit/512affe3d3c8abb258da832bff6b800dcfaacb89), [`991d9c1`](https://github.com/ls1intum/Apollon/commit/991d9c1b3ab8404f2d9564e6ecdefd9e0d9a0bbb), [`cd5b5f1`](https://github.com/ls1intum/Apollon/commit/cd5b5f1f5465763e4c966c8286045c635d121c3d), [`3f37c97`](https://github.com/ls1intum/Apollon/commit/3f37c97b0a8b159ff896e2acbc43cf536936d533), [`cec0a4c`](https://github.com/ls1intum/Apollon/commit/cec0a4c895fc361bba203f5f2931447b5494e7e1)]:
+  - @tumaet/apollon@5.3.0
+
+## 5.1.1
+
+### Patch Changes
+
+- [#806](https://github.com/ls1intum/Apollon/pull/806) [`ecad49e`](https://github.com/ls1intum/Apollon/commit/ecad49ea7c88e0e4c90994bab37d9d80efef2712) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Fixes the iOS app scrolling away from the diagram after you finish typing in a label or a text field, leaving a gap where the keyboard was.
+
+- Updated dependencies [[`ecad49e`](https://github.com/ls1intum/Apollon/commit/ecad49ea7c88e0e4c90994bab37d9d80efef2712), [`ecad49e`](https://github.com/ls1intum/Apollon/commit/ecad49ea7c88e0e4c90994bab37d9d80efef2712), [`ecad49e`](https://github.com/ls1intum/Apollon/commit/ecad49ea7c88e0e4c90994bab37d9d80efef2712), [`ecad49e`](https://github.com/ls1intum/Apollon/commit/ecad49ea7c88e0e4c90994bab37d9d80efef2712)]:
+  - @tumaet/apollon@5.3.0
+  - @tumaet/ui@0.0.2
+
+## 5.1.0
+
+### Minor Changes
+
+- [#795](https://github.com/ls1intum/Apollon/pull/795) [`cba2d71`](https://github.com/ls1intum/Apollon/commit/cba2d7113457a8df4e3337a72d1574b79a33690c) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Configure the embedded editor's theme live from the playground. A new theme panel exposes the public `--apollon-*` tokens in tiers — Essentials first (brand, background, foreground, radius, grid), then Advanced surfaces/shape/chrome, then feature-specific groups (assessment, collaboration, highlight, color-picker) that each carry a "Show me in the editor" button so their effect is actually visible. Colors get a swatch + value field, lengths get sliders, and there's a light/dark switch, per-control reset, and a copy-as-embed `createApollonTheme` snippet that emits `dataTheme="dark"` when dark is active. Controls show the value the editor actually resolves in the current theme (not a hardcoded light default).
+
+### Patch Changes
+
+- Updated dependencies [[`e108b79`](https://github.com/ls1intum/Apollon/commit/e108b79955d159104db6809077ca4d7255ae1a20), [`8905b71`](https://github.com/ls1intum/Apollon/commit/8905b714f4815e5ade163e9144b424b97f13859c), [`43d2739`](https://github.com/ls1intum/Apollon/commit/43d2739873d1ed9e65a72ef14caf5e3f2a0e1833), [`0ac2478`](https://github.com/ls1intum/Apollon/commit/0ac2478749e3deef74f3ddadbae6dc87191c56a2), [`0ac2478`](https://github.com/ls1intum/Apollon/commit/0ac2478749e3deef74f3ddadbae6dc87191c56a2), [`474029e`](https://github.com/ls1intum/Apollon/commit/474029ea8c2fbc39b73fd86b2f6e91e5bef9ceee), [`930b10c`](https://github.com/ls1intum/Apollon/commit/930b10c2fbf3e7c4b5c8b5afe5b430c44700dbf7), [`882b88c`](https://github.com/ls1intum/Apollon/commit/882b88cf517f2caaeb2e189d7df7a7b3282a1bf6), [`cba2d71`](https://github.com/ls1intum/Apollon/commit/cba2d7113457a8df4e3337a72d1574b79a33690c), [`9c4782c`](https://github.com/ls1intum/Apollon/commit/9c4782c639d051100440f1141bde877ae8d4928a)]:
+  - @tumaet/apollon@5.3.0
+
+## 5.0.1
+
+### Patch Changes
+
+- [#787](https://github.com/ls1intum/Apollon/pull/787) [`82ef0af`](https://github.com/ls1intum/Apollon/commit/82ef0af97792d17495f318ebdfee908ba0cdbf13) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Fixes the frosted-glass toolbars, home bar, and floating controls losing their blur in Chrome and Firefox, where they showed a flat translucent panel that flickered as content scrolled behind it.
+
+- Updated dependencies [[`82ef0af`](https://github.com/ls1intum/Apollon/commit/82ef0af97792d17495f318ebdfee908ba0cdbf13)]:
+  - @tumaet/apollon@5.3.0
+
+## 5.0.0
+
+### Major Changes
+
+- Ships the latest `@tumaet/apollon` editor release.
+
+### Minor Changes
+
+- [#759](https://github.com/ls1intum/Apollon/pull/759) [`e4a44f2`](https://github.com/ls1intum/Apollon/commit/e4a44f200c864e8684d01bf4113968c7dfc7fa96) Thanks [@FadyGergesRezk](https://github.com/FadyGergesRezk)! - Rebuilds the web app's interface on one shared component system, so the editor shell, dialogs, version history, and diagram gallery now share a single consistent look — matching the homepage — in both light and dark. Menus, dialogs, and sheets are fully keyboard-accessible, with focus trapped inside them and `Escape` to close, and the app loads lighter after dropping its previous UI framework.
+
+### Patch Changes
+
+- [#786](https://github.com/ls1intum/Apollon/pull/786) [`16e90a7`](https://github.com/ls1intum/Apollon/commit/16e90a739b5e50938fd9276660494b317473d6ca) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Modernize the standalone runtimes, behavior-preserving.
+
+  **Server:** migrate Express 5 → Hono 4 + `@hono/node-server` (both zero-runtime-dependency), dropping `express`/`cors`/`cookie`/`pino-http` and ~18 transitives. Routes, status codes, response bodies/headers, the owner-cookie HMAC, CORS policy, the zod error envelopes and the yjs collaboration WebSocket relay are all preserved. Runtime majors bumped: zod 4, redis 6 (RESP2-pinned to keep raw reply shapes), pino 10, ulid 3, and `dotenv` replaced by Node's built-in `util.parseEnv`.
+
+  **Webapp:** replace `@ionic/react` (imported only for `isPlatform()` UA checks) with a 45-line vendored `platform.ts`, cutting the Stencil runtime from the initial bundle (~−47% initial gzip) and de-duplicating the editor; `uuid` → native `crypto.randomUUID`.
+
+- Updated dependencies [[`16e90a7`](https://github.com/ls1intum/Apollon/commit/16e90a739b5e50938fd9276660494b317473d6ca), [`e4a44f2`](https://github.com/ls1intum/Apollon/commit/e4a44f200c864e8684d01bf4113968c7dfc7fa96), [`e4a44f2`](https://github.com/ls1intum/Apollon/commit/e4a44f200c864e8684d01bf4113968c7dfc7fa96), [`91d36ad`](https://github.com/ls1intum/Apollon/commit/91d36addd69f1982c79df1dfc68c8a5da17e7f8a), [`16e90a7`](https://github.com/ls1intum/Apollon/commit/16e90a739b5e50938fd9276660494b317473d6ca)]:
+  - @tumaet/apollon@5.3.0
+  - @tumaet/ui@0.0.1
+
+## 4.9.0
+
+### Minor Changes
+
+- [#677](https://github.com/ls1intum/Apollon/pull/677) [`41059b1`](https://github.com/ls1intum/Apollon/commit/41059b1c93e4edc483c8f0c039d4378a7bab2489) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Embed your diagrams anywhere. Drop one into a README, an issue, a pull request, or any page as a Markdown image — it renders inline as a polished framed card with the diagram, its title, and an "Open in Apollon" button, matches light and dark themes, and updates as you keep editing — or paste a ready-made iframe snippet. The share dialog gains an "Embed" panel with copy-paste code, and embedding needs no sign-in or tokens: the diagram link is the key, exactly like opening it in the editor. Sharing now leads with live collaboration by default, and the dialog uploads a single shared copy whose access (collaborate, edit, or feedback) you can switch without ever creating duplicates. Embedded diagrams stay alive as long as they're viewed, so they won't quietly disappear from a README, and a popular one stays fast no matter how many people open it.
+
+- [#778](https://github.com/ls1intum/Apollon/pull/778) [`d03f562`](https://github.com/ls1intum/Apollon/commit/d03f562b3fabfc92e7cff870fe08061d678926f6) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Rebuild the editor chrome as cohesive floating glass. The header is no longer a flat bar — it is rounded, translucent islands (brand + navigation, the document title, and actions/version/theme) that hover over a full-bleed canvas with the same margins and material as the element palette and zoom controls. The title sits next to the navigation and grows with the diagram name; the header fluidly collapses labels to icons as space tightens and, on phones, into an overflow menu rather than hiding controls. Version history becomes a floating glass panel — a right-side rail on wider screens, a floating card on phones — that the diagram makes room for without shifting. The chrome hugs device safe areas (notch, Dynamic Island, home indicator) on iOS and Android. New diagrams are created untitled (no auto-generated name): the dashboard shows a muted "Untitled diagram" placeholder and the editor a placeholder in the title field, instead of a literal "Untitled Diagram" name. The dashboard header gets a frosted-glass refresh and a "Skip to diagram" link speeds up keyboard navigation. Everything themes in light and dark and respects reduced-transparency, increased-contrast and reduced-motion preferences.
+
+### Patch Changes
+
+- Updated dependencies [[`8251733`](https://github.com/ls1intum/Apollon/commit/8251733a965e9fd3cd0beb7565e3abf138a895d5), [`d03f562`](https://github.com/ls1intum/Apollon/commit/d03f562b3fabfc92e7cff870fe08061d678926f6), [`2115fe3`](https://github.com/ls1intum/Apollon/commit/2115fe3d2c787a9055e6d9fbeab61a122eaaf6eb), [`295a627`](https://github.com/ls1intum/Apollon/commit/295a627e1067c0d23fd71ef3e26c8554a4a6e073), [`515777b`](https://github.com/ls1intum/Apollon/commit/515777ba6a45c0110adfa24c1fdb76251d0e9636), [`451ca97`](https://github.com/ls1intum/Apollon/commit/451ca97872d1afb5478e628179151f7acc71aab7)]:
+  - @tumaet/apollon@5.3.0
+
+## 4.8.0
+
+### Minor Changes
+
+- [#678](https://github.com/ls1intum/Apollon/pull/678) [`17a01b2`](https://github.com/ls1intum/Apollon/commit/17a01b25b648f982a259fe25f15d6efae512710c) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Diagrams you keep on your device — the ones you haven't shared through the server — now have version history. Save named versions as you work, scroll back through them, preview any earlier version (or open it in a new tab to compare side by side), and restore one. Every restore first snapshots whatever is on the canvas, so you can always undo it. Your versions stay on your device, work fully offline, and stay in sync across browser tabs. Shared diagrams also gain a "Save a local copy" action, so you can keep an editable copy on your device before the shared version expires.
+
+- [#769](https://github.com/ls1intum/Apollon/pull/769) [`d56ebf0`](https://github.com/ls1intum/Apollon/commit/d56ebf01c6424255960e466b7c8ae0f8dca0128d) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - The diagram dashboard has a cleaner, more modern look — a slimmer top bar, lighter shadows, cooler surfaces, and rounded cards — with stronger text and border contrast for better readability and accessibility in both light and dark themes. The top bar is now the same height with consistent buttons on the dashboard and inside the editor, the editor toolbar collapses long labels (like "All diagrams" and "Version history") to icons when space is tight, and dark mode uses one consistent cool palette throughout.
+
+### Patch Changes
+
+- [#761](https://github.com/ls1intum/Apollon/pull/761) [`5d4a8dd`](https://github.com/ls1intum/Apollon/commit/5d4a8dd5d6d34d1c26d4258a99aadc02faca1c17) Thanks [@tamang29](https://github.com/tamang29)! - Mobile navigation, editor controls, sharing, and the New Diagram dialog now fit iPhone portrait and landscape screens without overlapping notches or menus.
+
+- [#763](https://github.com/ls1intum/Apollon/pull/763) [`82942cd`](https://github.com/ls1intum/Apollon/commit/82942cddec7d3dd33711d3f38eba92e10c1da0c9) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Fixes the standalone editor sometimes losing your most recent change when you navigate away or when a save didn't reach the server. Your latest edit is now saved reliably on the way out, a save is never reported as successful unless it actually persisted, and an edit made while you are previewing an earlier version is saved once you return.
+
+- [#675](https://github.com/ls1intum/Apollon/pull/675) [`1bb280d`](https://github.com/ls1intum/Apollon/commit/1bb280d23f9a4cfb9339a04b2311c1c50aeffae7) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Fixes PNG and PDF export on large or complex diagrams. Exporting one used to do nothing — the menu closed and either no file or a 0-byte image was saved. Now the PNG downloads reliably, the PDF stays sharp at any zoom, and if a diagram is too large to export the app tells you instead of failing silently.
+
+- Updated dependencies [[`82942cd`](https://github.com/ls1intum/Apollon/commit/82942cddec7d3dd33711d3f38eba92e10c1da0c9), [`5013fc6`](https://github.com/ls1intum/Apollon/commit/5013fc632ea0e18c9fce5baf1f66f1d50617a358), [`5d4a8dd`](https://github.com/ls1intum/Apollon/commit/5d4a8dd5d6d34d1c26d4258a99aadc02faca1c17), [`1bb280d`](https://github.com/ls1intum/Apollon/commit/1bb280d23f9a4cfb9339a04b2311c1c50aeffae7)]:
+  - @tumaet/apollon@5.3.0
+
+## 4.7.0
+
+### Minor Changes
+
+- [#764](https://github.com/ls1intum/Apollon/pull/764) [`1fc31cc`](https://github.com/ls1intum/Apollon/commit/1fc31cc7c1d2c8dedb3555edb5d5d063f572acae) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Upgrade to React 19 and enable the React Compiler.
+
+  `@tumaet/apollon` now targets React 19 — its `react` and `react-dom` peer dependencies are `^19.0.0`. The `<Apollon>` component takes `ref` as a regular prop (the `forwardRef` wrapper was removed); consumers passing a `ref` need no changes. The React Compiler auto-memoizes the editor, so the manual `useMemo`/`useCallback`/`memo` and the hand-rolled stale-closure workarounds have been removed, and node/edge popovers anchor via a callback ref instead of reading a ref during render.
+
+### Patch Changes
+
+- [#758](https://github.com/ls1intum/Apollon/pull/758) [`af7c085`](https://github.com/ls1intum/Apollon/commit/af7c085e1db2073e82641af17f363907067389da) Thanks [@tamang29](https://github.com/tamang29)! - The iOS app supports both iPhone and iPad again so updates remain compatible with existing installations.
+
+- [#765](https://github.com/ls1intum/Apollon/pull/765) [`6fe657c`](https://github.com/ls1intum/Apollon/commit/6fe657cfabbb1f60936d03b758039fe1e7fade6f) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Simplify PPTX text positioning. `@tumaet/apollon`'s `compat` export now resolves `dominant-baseline` into an explicit baseline `y`, so the PPTX exporter no longer needs its empirically-tuned `TEXT_BASELINE_OFFSET_PX` fudge — the text-box top is derived directly from the resolved baseline and the box height.
+
+- Updated dependencies [[`6fe657c`](https://github.com/ls1intum/Apollon/commit/6fe657cfabbb1f60936d03b758039fe1e7fade6f), [`6fe657c`](https://github.com/ls1intum/Apollon/commit/6fe657cfabbb1f60936d03b758039fe1e7fade6f), [`21c6f99`](https://github.com/ls1intum/Apollon/commit/21c6f9914b1ab24d79fa6f6d6527ca6260db8c43), [`1fc31cc`](https://github.com/ls1intum/Apollon/commit/1fc31cc7c1d2c8dedb3555edb5d5d063f572acae)]:
+  - @tumaet/apollon@5.3.0
+
+## 4.6.0
+
+### Minor Changes
+
+- [#662](https://github.com/ls1intum/Apollon/pull/662) [`6bc0372`](https://github.com/ls1intum/Apollon/commit/6bc037268849b657cb409f9a0bf3b805e52a7883) Thanks [@FadyGergesRezk](https://github.com/FadyGergesRezk)! - Add a home page that opens to a gallery of all your diagrams, each with a live preview, plus search, sorting by last modified, and favorites — with your shared diagrams shown alongside your local ones. You can create a diagram from scratch or from a template (previewing each) without leaving the gallery, and because every diagram now has its own address you can cmd/ctrl-click to open several in new tabs and jump back to the gallery from the editor. The imprint and privacy pages are reachable from anywhere, with a clear way back to whatever you were working on.
+
+### Patch Changes
+
+- [#744](https://github.com/ls1intum/Apollon/pull/744) [`1fdb9bc`](https://github.com/ls1intum/Apollon/commit/1fdb9bc70b2fcfc119619876d595b36eebb36f8a) Thanks [@tamang29](https://github.com/tamang29)! - The playground can now simulate a live collaboration session across two browser tabs, with collapsible side panels that mimic host-app chrome — handy for trying out shared cursors and presence locally.
+
+- Updated dependencies [[`1fdb9bc`](https://github.com/ls1intum/Apollon/commit/1fdb9bc70b2fcfc119619876d595b36eebb36f8a), [`dfb4479`](https://github.com/ls1intum/Apollon/commit/dfb4479bbf15671a6332c96b659efd9dd31c127b)]:
+  - @tumaet/apollon@5.3.0
+
+## 4.5.1
+
+### Patch Changes
+
+- [#738](https://github.com/ls1intum/Apollon/pull/738) [`247cf52`](https://github.com/ls1intum/Apollon/commit/247cf52c2f5d4460f406a0aac57c2df40cd2e324) Thanks [@tamang29](https://github.com/tamang29)! - The iOS app is now only available on iPad.
+
+## 4.5.0
+
+### Minor Changes
+
+- [#713](https://github.com/ls1intum/Apollon/pull/713) Thanks [@tamang29](https://github.com/tamang29)! - The mobile app can now export diagrams as PowerPoint (PPTX), matching the web app.
+
+- [#701](https://github.com/ls1intum/Apollon/pull/701) Thanks [@tamang29](https://github.com/tamang29)! - Apollon now runs as a native iOS and Android app, with native copy-to-clipboard and share links that always point at the web app so they open anywhere.
+
+- [#710](https://github.com/ls1intum/Apollon/pull/710) Thanks [@FadyGergesRezk](https://github.com/FadyGergesRezk)! - Editing edges feels better: drag a bend handle to move one segment and watch the path update live, reconnect an endpoint without losing the waypoints you placed, and connection handles no longer crowd or overlap on small shapes.
+
+- [#681](https://github.com/ls1intum/Apollon/pull/681) Thanks [@tamang29](https://github.com/tamang29)! - Follow a collaborator while editing together: click their avatar to snap your view to theirs and keep tracking it as they move around the canvas.
+
+### Patch Changes
+
+- Updated dependencies:
+  - @tumaet/apollon@5.3.0
+
+## 4.4.1
+
+### Patch Changes
+
+- [#683](https://github.com/ls1intum/Apollon/pull/683) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Sharing a diagram a second time, or starting a new diagram during a collaboration session, no longer leaves a blank canvas behind.
+- [#682](https://github.com/ls1intum/Apollon/pull/682) Thanks [@tamang29](https://github.com/tamang29)! - PNG, SVG, PDF, and JSON export work again on iOS and Android. Closes [#553](https://github.com/ls1intum/Apollon/issues/553).
+
+## 4.4.0
+
+### Major Changes
+
+- [#657](https://github.com/ls1intum/Apollon/pull/657) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Deployment break: requires Redis Stack 7.4 and an `OWNER_SECRET` ≥ 32 chars. Diagram keys move from `STRING` to `RedisJSON`; a one-shot migration must run before deploy. Runbook in the [GitHub Release](https://github.com/ls1intum/Apollon/releases/tag/v4.4.0).
+
+### Minor Changes
+
+- [#658](https://github.com/ls1intum/Apollon/pull/658) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Export diagrams as animatable PowerPoint slides — every class, arrow, label, and attribute becomes its own native PowerPoint shape, ready for per-element animations.
+- [#663](https://github.com/ls1intum/Apollon/pull/663) Thanks [@tamang29](https://github.com/tamang29)! - Live cursors and presence during a collaboration session.
+- [#657](https://github.com/ls1intum/Apollon/pull/657) Thanks [@FelixTJDietrich](https://github.com/FelixTJDietrich)! - Figma-style version history: named milestones, 30-minute auto-snapshots, preview, one-click restore with undo, permalinks.

@@ -1,0 +1,26 @@
+{
+  "name": "apolloncase",
+  "private": true,
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "workspaces": [
+    "library",
+    "packages/ui",
+    "webapp",
+    "services/diagrams-backend"
+  ],
+  "overrides": {
+    "@eslint/plugin-kit": ">=0.3.4",
+    "@xmldom/xmldom": ">=0.8.12",
+    "brace-expansion": ">=2.0.2",
+    "esbuild": "0.28.1",
+    "flatted": ">=3.4.2",
+    "handlebars": ">=4.7.9",
+    "lodash": ">=4.17.21",
+    "minimatch": ">=3.0.5",
+    "picomatch": ">=4.0.4",
+    "tar": ">=6.2.1"
+  }
+}

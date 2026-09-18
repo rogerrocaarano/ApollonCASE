@@ -1,0 +1,173 @@
+{
+  "name": "@tumaet/apollon",
+  "version": "5.3.0",
+  "description": "Embeddable UML modeling editor. Mounts into any DOM node — works inside Angular, Vue, Svelte, vanilla JS, or React hosts.",
+  "keywords": [
+    "uml",
+    "uml-editor",
+    "diagram-editor",
+    "react",
+    "angular",
+    "yjs"
+  ],
+  "homepage": "https://github.com/ls1intum/Apollon#readme",
+  "bugs": {
+    "url": "https://github.com/ls1intum/Apollon/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ls1intum/Apollon.git",
+    "directory": "library"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "TUM Applied Education Technologies",
+    "url": "https://aet.cit.tum.de/"
+  },
+  "funding": "https://github.com/ls1intum/Apollon",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./internals": {
+      "types": "./dist/internals.d.ts",
+      "import": "./dist/internals.js"
+    },
+    "./export": {
+      "types": "./dist/export.d.ts",
+      "import": "./dist/export.js"
+    },
+    "./model": {
+      "types": "./dist/model.d.ts",
+      "import": "./dist/model.js"
+    },
+    "./style.css": "./dist/assets/style.css",
+    "./schema": "./schema/uml-model-4.schema.json",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "dev": "npm run build --workspace=@tumaet/ui && vite",
+    "build": "npm run build --workspace=@tumaet/ui && tsc -b && vite build",
+    "build:watch": "npx concurrently -k \"npm run build:css:watch --workspace=@tumaet/ui\" \"npm run build:types:watch --workspace=@tumaet/ui\" \"tsc -b --watch\" \"vite build --watch\"",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "test": "npm run build:css --workspace=@tumaet/ui && vitest run",
+    "test:watch": "npm run build:css --workspace=@tumaet/ui && vitest",
+    "test:coverage": "npm run build:css --workspace=@tumaet/ui && vitest run --coverage",
+    "size": "size-limit",
+    "gen:fonts": "node scripts/gen-fonts.mjs",
+    "gen:schema": "node scripts/gen-schema.mjs"
+  },
+  "size-limit": [
+    {
+      "name": "main entry (published JS, deps externalized)",
+      "path": "dist/index.js",
+      "limit": "122 kB",
+      "disablePlugins": [
+        "@size-limit/webpack",
+        "@size-limit/time"
+      ]
+    },
+    {
+      "name": "edge-routing Worker (loaded for large diagrams)",
+      "path": "dist/assets/edgeGeometry.worker-*.js",
+      "limit": "40 kB",
+      "disablePlugins": [
+        "@size-limit/webpack",
+        "@size-limit/time"
+      ]
+    },
+    {
+      "name": "/model normalization chunk (DOM-free)",
+      "path": "dist/versionConverter-*.js",
+      "limit": "8 kB",
+      "disablePlugins": [
+        "@size-limit/webpack",
+        "@size-limit/time"
+      ]
+    },
+    {
+      "name": "/export lazy chunk (published JS, renderers externalized)",
+      "path": "dist/export.js",
+      "limit": "700 kB",
+      "disablePlugins": [
+        "@size-limit/webpack",
+        "@size-limit/time"
+      ]
+    }
+  ],
+  "peerDependencies": {
+    "@xyflow/react": "^12.9.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.0"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.6.0",
+    "@chenglou/pretext": "0.0.8",
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "3.2.2",
+    "@xyflow/system": "0.0.78",
+    "lucide-react": "1.22.0",
+    "zustand": "5.0.14"
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-wasm": "2.6.2",
+    "jspdf": "4.2.1",
+    "svg2pdf.js": "2.7.0"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "5.9.3",
+    "@eslint/js": "10.0.1",
+    "@microsoft/api-extractor": "7.58.9",
+    "@size-limit/preset-big-lib": "12.1.0",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@tumaet/ui": "*",
+    "@types/node": "26.0.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "@vitest/coverage-v8": "4.1.9",
+    "@xyflow/react": "12.11.1",
+    "ajv": "8.20.0",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "10.6.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "fast-check": "4.4.0",
+    "globals": "17.7.0",
+    "jsdom": "29.1.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "size-limit": "12.1.0",
+    "subset-font": "2.5.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.62.0",
+    "typescript-json-schema": "0.67.4",
+    "vite": "8.1.0",
+    "vite-plugin-dts": "5.0.3",
+    "vitest": "4.1.9",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.31"
+  }
+}

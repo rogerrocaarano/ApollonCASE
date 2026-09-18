@@ -1,0 +1,70 @@
+{
+  "name": "@tumaet/ui",
+  "private": true,
+  "version": "0.0.2",
+  "type": "module",
+  "exports": {
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "default": "./src/components/*"
+    },
+    "./styles/theme.css": "./src/styles/theme.css",
+    "./styles/tokens.css": "./src/styles/tokens.css",
+    "./lib/utils": "./src/lib/utils.ts",
+    "./lib/color-swatch-tokens": {
+      "types": "./dist/lib/color-swatch-tokens.d.ts",
+      "default": "./src/lib/color-swatch-tokens.ts"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "default": "./src/theme.ts"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:css && npm run build:types",
+    "build:types": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --noEmit false --outDir dist",
+    "build:types:watch": "tsc -p tsconfig.build.json --declaration --emitDeclarationOnly --noEmit false --outDir dist --watch --preserveWatchOutput",
+    "build:css": "tailwindcss -i src/styles/components.css -o dist/components.css",
+    "build:css:watch": "tailwindcss -i src/styles/components.css -o dist/components.css --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.6.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.22.0",
+    "tailwind-merge": "3.6.0",
+    "tailwindcss": "4.3.1"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "5.9.3",
+    "@eslint/js": "10.0.1",
+    "@storybook/addon-docs": "10.4.6",
+    "@storybook/react-vite": "10.4.6",
+    "@tailwindcss/cli": "4.3.1",
+    "@tailwindcss/vite": "4.3.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "eslint": "10.6.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.7.0",
+    "jsdom": "29.1.1",
+    "storybook": "10.4.6",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.62.0",
+    "vite": "8.1.0",
+    "vitest": "4.1.9"
+  }
+}

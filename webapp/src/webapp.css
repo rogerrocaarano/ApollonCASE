@@ -1,0 +1,666 @@
+/* Tailwind + the shared design-token system (the single source of truth for all
+   --apollon-* and --home-* tokens, plus the semantic @theme utilities) live in
+   @tumaet/ui. This webapp.css keeps only app-chrome (scrollbars, loading screen,
+   toast) plus the accent bridge below. */
+@import "@tumaet/ui/styles/theme.css";
+
+/* The shared primitives (button / icon-button / input / textarea / tooltip) are
+   styled by semantic data-slot rules in this precompiled, Preflight-free
+   components.css. Tailwind still drives app layout + inline-utility components.
+   Relative path (not the package export) so the Tailwind Vite plugin's CSS
+   resolver reliably inlines the precompiled dist file. */
+@import "../../packages/ui/dist/components.css";
+
+/* Single source of truth for the app font. The editor self-hosts Inter in its
+   bundled stylesheet, so the app shell and diagram canvas can share one
+   deterministic family without contacting a third-party font service. */
+@theme {
+  --font-sans:
+    "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+/* Accent bridge — webapp root scope ONLY (the published library default must not
+   depend on app tokens). Drive the editor accent from the brand primitive so the
+   homepage and the embedded editor share one brand color. --primitive-accent-base
+   carries its own light/dark values in tokens.css, so this re-resolves in dark.
+   Points straight at the primitive (not --home-accent-base) so the token graph
+   stays a clean DAG: --apollon-* never depends back on the --home-* layer. */
+:root {
+  --apollon-primary: var(--primitive-accent-base);
+}
+
+@keyframes diagram-highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--home-accent-base) 35%, transparent);
+  }
+
+  60% {
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--home-accent-base) 35%, transparent);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+
+  /* Paint the viewport with the theme background so the browser's
+     rubber-band overscroll zone matches the active theme instead of
+     showing the white user-agent default. Theme tokens are selected by
+     the root data-theme attribute. */
+  background-color: var(--apollon-background);
+  color: var(--apollon-foreground);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh; /* Dynamic viewport height for iOS */
+  height: 100vh; /* Fallback */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: var(--apollon-background);
+  color: var(--apollon-foreground);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+}
+
+html,
+body,
+#root {
+  /* Only the text colour eases on a theme switch. Animating background-color
+     here forces every backdrop-blur surface above it (home navbar, glass
+     plates) to re-rasterise its blur each frame for 220ms — a visible flicker.
+     Flip the background in one frame so the blurred plates never sample a
+     tweening backdrop. */
+  transition: color 220ms ease;
+}
+
+/* The theme swap carries data-theme-switching on the root for a single frame
+   (see useThemeStore.applyThemeToDocument). Kill every transition while it's set
+   so the whole UI — the chrome header's buttons and glass surfaces included —
+   recolours in one frame, instead of each control tweening its own colour/
+   background at its own hover duration (which reads as a slow, staggered flip).
+   Hover and interaction transitions resume the moment the attribute is removed. */
+:root[data-theme-switching] *,
+:root[data-theme-switching] *::before,
+:root[data-theme-switching] *::after {
+  transition: none !important;
+}
+
+/* Subtle dot-grid behind the home page so it reads as "the same canvas the
+   editor floats over". Matches the editor's MAJOR grid (CustomBackground): same
+   50px cadence and --apollon-grid token (so it tracks both themes), but rendered
+   as faint dots at each intersection, mixed down so it never competes with the
+   cards/glass on top. Painted on the page root, behind the z-10 scroll <main>. */
+.home-canvas-bg {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--apollon-grid) 55%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 50px 50px; /* = MAJOR_GRID_GAP (SNAP_TO_GRID_PX * 10) */
+  background-position: 0 0;
+}
+
+/* Neutral, theme-tracking scrollbar — the thumb is a translucent tint of the
+   secondary text color (NOT the brand navy --home-accent-base, which read as a
+   stray blue bar). Mixing down from --home-text-secondary keeps it subtle and
+   self-adjusting in both light and dark; the track sits on the sunken surface. */
+.home-page-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(
+      in srgb,
+      var(--home-text-secondary) 35%,
+      transparent
+    )
+    var(--home-surface-sunken);
+}
+
+.home-page-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.home-page-scrollbar::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--home-surface-sunken) 78%,
+    var(--home-surface-base)
+  );
+}
+
+.home-page-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--home-text-secondary) 35%, transparent);
+  background-clip: content-box;
+}
+
+.home-page-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--home-text-secondary) 50%, transparent);
+  background-clip: content-box;
+}
+
+/* The gallery search renders its own Clear button, so hide the browser's
+   native search-cancel control to avoid two overlapping clear buttons. */
+#recent-diagrams-search::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Reusable scroll-root utility:
+   keep vertical scrolling while preventing accidental horizontal overflow. */
+.app-scroll-y {
+  overflow-y: auto;
+  overflow-x: clip;
+}
+
+.app-loading-screen {
+  display: flex;
+  min-height: 100%;
+  width: 100%;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--home-surface-sunken) 42%, transparent),
+      transparent 34%
+    ),
+    var(--home-surface-base);
+  color: var(--home-text-primary);
+  font-family:
+    "Inter", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Arial,
+    sans-serif;
+  transition:
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+.app-loading-screen--boot {
+  min-height: 100vh;
+}
+
+.app-loading-screen--panel {
+  min-height: min(52vh, 420px);
+  border: 1px solid var(--home-border-subtle);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--home-surface-raised-hover) 46%, transparent),
+      transparent 70%
+    ),
+    var(--home-surface-raised);
+}
+
+.app-loading-content {
+  display: flex;
+  max-width: 260px;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.app-loading-logo-shell {
+  display: flex;
+  height: 58px;
+  width: 116px;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-loading-logo {
+  display: block;
+  height: 54px;
+  width: 108px;
+}
+
+.app-loading-progress {
+  position: relative;
+  display: block;
+  height: 3px;
+  width: 156px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--home-text-secondary) 18%, transparent);
+}
+
+.app-loading-progress::after {
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: var(--home-accent-base);
+  content: "";
+  transform: translateX(-120%);
+  animation: app-loading-progress 1100ms ease-in-out infinite;
+}
+
+@keyframes app-loading-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-progress::after {
+    animation: none;
+    transform: translateX(70%);
+  }
+}
+
+.home-diagram-card {
+  /* Single sizing knob for the diagram tile. The grid owns width (auto-fill
+     minmax 1fr); this floor keeps grid rows congruent now that the title can
+     wrap to two lines and the preview is aspect-driven. It is also the
+     off-screen placeholder estimate for content-visibility below — keep both
+     in sync. Derived from the 16:10 preview + header/footer at the grid's base
+     ~240px width. */
+  --card-min-h: 17.5rem;
+  contain: layout paint;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--card-min-h);
+}
+
+/* On touch / native (no hover), reveal the card's hover-only overlay controls
+   (favorite + actions) permanently — there's no pointer to hover with. The root
+   is marked from a definitive native check / coarse pointer in App.tsx, because
+   @media(hover:none) is unreliable in Capacitor webviews. */
+:root[data-coarse-pointer] .home-card-control {
+  opacity: 1;
+}
+
+/* Low-alpha slate shadows are invisible on dark surfaces, so dark hover uses a
+   black shadow instead of the `--home-shadow-card-hover` token. Keep its geometry
+   in sync with the light hover in DiagramCard.tsx. */
+:root[data-theme="dark"] .home-diagram-card:hover {
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--primitive-shadow-ink) 38%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--home-text-primary) 12%, transparent);
+}
+
+/* Buttons that sit on the accent banner / dark navbar (translucent white). */
+.home-on-accent-btn {
+  border: 1px solid var(--home-on-accent-border);
+  background-color: var(--home-on-accent-bg);
+  color: var(--home-on-accent-text);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+.home-on-accent-btn:hover {
+  background-color: var(--home-on-accent-bg-hover);
+}
+
+/* Ghost variant — no idle fill, just a translucent border that fills on hover. */
+.home-on-accent-btn--ghost {
+  background-color: transparent;
+}
+
+.home-card-icon-button {
+  border-radius: var(--home-radius-sm);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    filter 150ms ease;
+}
+
+.home-card-icon-button:hover {
+  color: var(--icon-hover-color, currentcolor);
+  background-color: var(
+    --icon-hover-bg,
+    color-mix(in srgb, currentcolor 16%, transparent)
+  );
+  filter: var(--icon-hover-filter, none);
+}
+
+.home-card-icon-button[data-active="true"] {
+  color: var(--icon-active-color, currentcolor);
+  filter: var(--icon-active-filter, none);
+}
+
+.theme-thumbnail-image {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  transition: opacity 160ms ease;
+}
+
+.theme-thumbnail-dark {
+  opacity: 0;
+}
+
+:root[data-theme="dark"] .theme-thumbnail-light {
+  opacity: 0;
+}
+
+:root[data-theme="dark"] .theme-thumbnail-dark {
+  opacity: 1;
+}
+
+@supports not (content-visibility: auto) {
+  .home-diagram-card {
+    contain: layout paint;
+  }
+}
+
+.apollon-editor {
+  flex-grow: 1;
+}
+
+/* Home/sub-page content gutter — hugs the safe area (max(edge, inset)) so the
+   gallery and the sticky ChromeSubHeader band clear a side notch in landscape.
+   The top inset is handled by the sticky band's own `top` offset, not here. */
+.home-content-x {
+  padding-left: max(1rem, var(--safe-area-inset-left, 0px));
+  padding-right: max(1rem, var(--safe-area-inset-right, 0px));
+}
+
+@media (min-width: 768px) {
+  .home-content-x {
+    padding-left: max(1.5rem, var(--safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, var(--safe-area-inset-right, 0px));
+  }
+}
+
+/* Operator-authored legal Markdown (8px spacing scale) so rendered legal pages
+   keep their typography + tokens. */
+.legal-content {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--apollon-foreground);
+}
+
+.legal-content :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--apollon-foreground);
+}
+
+.legal-content h2 {
+  font-size: 1.35rem;
+}
+
+.legal-content h3 {
+  font-size: 1.15rem;
+}
+
+@media (min-width: 768px) {
+  .legal-content h2 {
+    font-size: 1.5rem;
+  }
+
+  .legal-content h3 {
+    font-size: 1.25rem;
+  }
+}
+
+.legal-content :is(p, ul, ol) {
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+.legal-content ul {
+  padding-left: 24px;
+  list-style-type: disc;
+}
+
+.legal-content ol {
+  padding-left: 24px;
+  list-style-type: decimal;
+}
+
+.legal-content ul ul {
+  list-style-type: circle;
+  margin-bottom: 0;
+}
+
+.legal-content ol ol {
+  list-style-type: lower-alpha;
+  margin-bottom: 0;
+}
+
+.legal-content li {
+  margin-bottom: 4px;
+  display: list-item;
+}
+
+.legal-content li::marker {
+  color: var(--apollon-foreground);
+}
+
+.legal-content a {
+  color: var(--apollon-primary);
+  text-decoration: underline;
+}
+
+/* Tables are authored by operators; on narrow screens let them scroll
+   horizontally rather than break the page layout. */
+.legal-content table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.legal-content :is(th, td) {
+  border: 1px solid var(--apollon-gray);
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-content th {
+  background-color: var(--apollon-background-variant);
+}
+
+.legal-content code {
+  background-color: var(--apollon-background-variant);
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 4px;
+  font-size: 0.95em;
+  word-break: break-all;
+}
+
+.legal-content pre {
+  background-color: var(--apollon-background-variant);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.legal-content blockquote {
+  border-left: 4px solid var(--apollon-gray);
+  padding-left: 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  color: var(--apollon-gray);
+}
+
+.legal-content hr {
+  border: none;
+  border-top: 1px solid var(--apollon-gray);
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+/* Progress bar for share modal upload */
+.share-modal-progress {
+  position: relative;
+  display: block;
+  height: 3px;
+  width: 100%;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--home-text-secondary) 18%, transparent);
+}
+
+.share-modal-progress::after {
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  background: var(--home-accent-base);
+  content: "";
+  transform: translateX(-120%);
+  animation: app-loading-progress 1100ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .share-modal-progress::after {
+    animation: none;
+    transform: translateX(70%);
+  }
+}
+
+/* Fade-in for newly revealed cards when pagination loads more */
+@keyframes gallery-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gallery-card-enter {
+  animation: gallery-card-enter 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card-enter {
+    animation: none;
+  }
+}
+
+/* ───────────────────────── Notifications ─────────────────────────
+   Unified look for all notification surfaces: react-toastify toasts share the
+   same surface, text, Inter font, radius and the --home-toast-* semantic
+   accents. Theme-aware via --home-* tokens. */
+
+.home-toast-container {
+  --toastify-font-family: var(--font-sans);
+  --toastify-toast-bd-radius: var(--home-radius-lg);
+  --toastify-toast-shadow: var(--home-shadow-overlay-box);
+  --toastify-color-success: var(--home-toast-success);
+  --toastify-color-error: var(--home-toast-error);
+  --toastify-color-warning: var(--home-toast-warning);
+  --toastify-color-info: var(--home-toast-info);
+  --toastify-icon-color-success: var(--home-toast-success);
+  --toastify-icon-color-error: var(--home-toast-error);
+  --toastify-icon-color-warning: var(--home-toast-warning);
+  --toastify-icon-color-info: var(--home-toast-info);
+
+  /* Default (untyped) progress bar — use our accent instead of the
+     library's rainbow gradient (light) / purple (dark). */
+  --toastify-color-progress-light: var(--home-accent-base);
+  --toastify-color-progress-dark: var(--home-accent-base);
+}
+
+/* The toast card: our raised surface + primary text with a thin, uniform
+   border. Severity is signalled solely by the colored icon + progress bar
+   (no left accent stripe — it would double up with the progress bar).
+   Qualified with `.Toastify__toast` so the design surface always beats
+   react-toastify's single-class `theme--light/dark` background regardless of
+   stylesheet import order (otherwise the toast renders white in dark). */
+.Toastify__toast.home-toast {
+  background: var(--home-surface-raised);
+  color: var(--home-text-primary);
+  border: 1px solid var(--home-border-subtle);
+  border-radius: var(--home-radius-lg);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.home-toast .Toastify__toast-body {
+  color: var(--home-text-primary);
+}
+
+.home-toast .Toastify__close-button {
+  color: var(--home-text-secondary);
+  opacity: 0.8;
+}
+
+.home-toast .Toastify__close-button:hover {
+  color: var(--home-text-primary);
+  opacity: 1;
+}
+
+/* Progress bar colors — scoped to beat react-toastify's theme gradient. */
+.home-toast-container .Toastify__progress-bar {
+  opacity: 0.9;
+}
+
+.home-toast-container .Toastify__progress-bar-theme--light,
+.home-toast-container .Toastify__progress-bar-theme--dark {
+  background: var(--home-accent-base);
+}
+
+.home-toast-container .Toastify__progress-bar--success {
+  background: var(--home-toast-success);
+}
+
+.home-toast-container .Toastify__progress-bar--error {
+  background: var(--home-toast-error);
+}
+
+.home-toast-container .Toastify__progress-bar--warning {
+  background: var(--home-toast-warning);
+}
+
+.home-toast-container .Toastify__progress-bar--info {
+  background: var(--home-toast-info);
+}
+
+/* Skip link: visually hidden until keyboard-focused, then pinned top-left above
+   all editor chrome so it's the first stop and jumps to the diagram. */
+.apollon-skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100000;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--home-surface-raised, #20242c);
+  color: var(--home-text-primary, #fff);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 24%);
+  transition: top 120ms ease;
+}
+
+.apollon-skip-link:focus-visible {
+  top: 8px;
+  outline: 2px solid var(--home-accent-base, #236ebe);
+  outline-offset: 2px;
+}
