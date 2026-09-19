@@ -7,7 +7,7 @@
 [![license](https://img.shields.io/npm/l/@tumaet/apollon)](https://github.com/ls1intum/Apollon/blob/main/LICENSE)
 [![types included](https://img.shields.io/npm/types/@tumaet/apollon)](https://www.npmjs.com/package/@tumaet/apollon)
 
-**Embeddable UML modeling editor for the web.** Mounts into any DOM node and works inside Angular, Vue, Svelte, vanilla JS, or React.
+**Editor UML embebible para la web.** Se monta en cualquier nodo del DOM y funciona dentro de Angular, Vue, Svelte, JS puro o React.
 
 <!-- npm-safe header widgets: npmjs.com strips GitHub's <picture> theme swap
      and width/height attributes, so these are plain markdown images at their
@@ -15,37 +15,47 @@
      on npmjs.com). All PNGs are generated from the live editor by the
      readme-assets Playwright project. -->
 
-[![Try the live demo](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-btn-demo-light-1x.png)](https://apollon.aet.cit.tum.de) [![Documentation](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-btn-docs-light-1x.png)](https://ls1intum.github.io/Apollon/library/)
+[![Prueba la demo en vivo](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-btn-demo-light-1x.png)](https://apollon.aet.cit.tum.de) [![Documentación](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-btn-docs-light-1x.png)](https://ls1intum.github.io/Apollon/library/)
 
-[API reference](https://ls1intum.github.io/Apollon/library/api) · [Examples](https://ls1intum.github.io/Apollon/library/embedding/react) · [GitHub](https://github.com/ls1intum/Apollon)
+[Referencia de la API](https://ls1intum.github.io/Apollon/library/api) · [Ejemplos](https://ls1intum.github.io/Apollon/library/embedding/react) · [GitHub](https://github.com/ls1intum/Apollon)
 
-[![The Apollon editor showing a UML class diagram, with the element palette on the left](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-editor-light.png)](https://apollon.aet.cit.tum.de)
+[![El editor Apollon mostrando un diagrama de clases UML, con la paleta de elementos a la izquierda](https://raw.githubusercontent.com/ls1intum/Apollon/main/docs/static/img/apollon-editor-light.png)](https://apollon.aet.cit.tum.de)
 
 </div>
 
 ---
 
-Apollon is the modeling editor behind [Artemis](https://artemis.tum.de/), TUM's interactive learning platform. The API is imperative: you call `new ApollonEditor(container, options)` and the editor renders its own React tree inside that node, so your own code never touches React. In a React app, render the [`<Apollon>` component](#react) instead.
+Apollon es el editor de modelado detrás de [Artemis](https://artemis.tum.de/), la plataforma de aprendizaje interactivo de TUM. La API es imperativa: se llama a `new ApollonEditor(container, options)` y el editor renderiza su propio árbol de React dentro de ese nodo, así que tu código nunca toca React. En una aplicación React, renderiza en su lugar el [componente `<Apollon>`](#react).
 
-## Features
+## Uso dentro de ApollonCASE
 
-- **13 diagram types**: class, object, activity, use case, communication, component, deployment, Petri net, reachability graph, syntax tree, flowchart, BPMN, and SFC.
-- **Framework-agnostic**: one imperative API for Angular, Vue, Svelte, and vanilla JS, plus a React component, hooks, and provider.
-- **Real-time collaboration**: opt-in multi-user editing over [Yjs](https://yjs.dev/), with any transport you like (WebSocket, WebRTC, BroadcastChannel).
-- **Export**: SVG and JSON are built in. Generate PNG and PDF from the SVG (see [Export](#export)).
-- **Canvas overlays**: inject your own toolbars, banners, and rails into the editor canvas; Apollon measures reserving controls and places them with the built-in chrome — `<ApollonControl>` (React) or `addControl` / `getRegionElement` (any framework). See [Overlay controls](https://ls1intum.github.io/Apollon/library/api/overlay-controls).
-- **Internationalization**: override the editor UI strings exposed in `ApollonLabels` (tooltips, aria-labels, edit/assessment popovers) via `labels` / `setLabels` / `useLabels`. See [i18n](https://ls1intum.github.io/Apollon/library/api/overlay-controls#i18n).
-- **Assessment mode**: attach scores and feedback to elements. This is the grading workflow Artemis uses.
-- **TypeScript**: type definitions are included.
+En este monorepo la librería se consume como el workspace `@tumaet/apollon` (ver el [README raíz](../README.md)); no hace falta instalarla desde npm.
 
-## Install
+- **Desarrollo:** la webapp resuelve `@tumaet/apollon` directamente desde `library/lib` mediante alias de Vite, así que los cambios se recargan en caliente al ejecutar `scripts/dev`.
+- **Compilación:** `npm run build --workspace=@tumaet/apollon` genera `library/dist/` (también lo necesitan `tsc -b` de la webapp y el backend `@tumaet/server`, que dependen del paquete compilado).
+- **Pruebas:** `npm run test --workspace=@tumaet/apollon`.
+
+El resto de este documento es el README original del paquete (traducido), pensado para quien lo instala desde npm.
+
+## Características
+
+- **13 tipos de diagrama**: clases, objetos, actividad, casos de uso, comunicación, componentes, despliegue, redes de Petri, grafo de alcanzabilidad, árbol sintáctico, diagrama de flujo, BPMN y SFC.
+- **Independiente del framework**: una sola API imperativa para Angular, Vue, Svelte y JS puro, más un componente React, hooks y provider.
+- **Colaboración en tiempo real**: edición multiusuario opcional sobre [Yjs](https://yjs.dev/), con el transporte que prefieras (WebSocket, WebRTC, BroadcastChannel).
+- **Exportación**: SVG y JSON incluidos. PNG y PDF se generan a partir del SVG (ver [Exportación](#exportación)).
+- **Superposiciones en el lienzo**: inyecta tus propias barras de herramientas, avisos y rieles en el lienzo del editor; Apollon mide los controles que reservan espacio y los coloca junto a la interfaz integrada, con `<ApollonControl>` (React) o `addControl` / `getRegionElement` (cualquier framework). Ver [Overlay controls](https://ls1intum.github.io/Apollon/library/api/overlay-controls).
+- **Internacionalización**: sustituye los textos de la interfaz del editor expuestos en `ApollonLabels` (tooltips, aria-labels, popovers de edición y evaluación) con `labels` / `setLabels` / `useLabels`. Ver [i18n](https://ls1intum.github.io/Apollon/library/api/overlay-controls#i18n).
+- **Modo de evaluación**: adjunta puntuaciones y comentarios a los elementos. Es el flujo de calificación que usa Artemis.
+- **TypeScript**: incluye definiciones de tipos.
+
+## Instalación
 
 ```sh
 npm install @tumaet/apollon
 ```
 
-npm 7+, pnpm 8+, and Bun resolve the required peer dependencies automatically.
-Yarn never installs peers — list them explicitly there:
+npm 7+, pnpm 8+ y Bun resuelven automáticamente las dependencias peer necesarias.
+Yarn nunca instala peers: en ese caso, enuméralas explícitamente:
 
 ```sh
 npm install @tumaet/apollon react react-dom @xyflow/react yjs y-protocols
@@ -56,31 +66,31 @@ import { ApollonEditor } from "@tumaet/apollon"
 import "@tumaet/apollon/style.css"
 ```
 
-Apollon ships **one** build with every runtime dependency left external — the React family (`react`, `react-dom`, `@xyflow/react`), the CRDT singletons (`yjs`, `y-protocols`), and Apollon's own UI deps (`@base-ui/react`, `lucide-react`, `@dnd-kit`, `zustand`, `@chenglou/pretext`), which arrive transitively when you install the package. Your bundler resolves and de-duplicates each one against your app's `node_modules`, and your bundle analyzer / SBOM tooling sees them as the real packages they are — never a copy inlined invisibly into one chunk. This works from any framework with a bundler (Angular, Vue, Svelte, React).
+Apollon publica **una única** compilación con todas las dependencias de ejecución externas: la familia React (`react`, `react-dom`, `@xyflow/react`), los singletons CRDT (`yjs`, `y-protocols`) y las dependencias de interfaz propias de Apollon (`@base-ui/react`, `lucide-react`, `@dnd-kit`, `zustand`, `@chenglou/pretext`), que llegan de forma transitiva al instalar el paquete. Tu bundler resuelve y deduplica cada una contra el `node_modules` de tu aplicación, y tus herramientas de análisis de bundle o SBOM las ven como los paquetes reales que son, nunca como una copia incrustada de forma invisible en un chunk. Esto funciona desde cualquier framework con bundler (Angular, Vue, Svelte, React).
 
-The required peers, and what each powers:
+Las peers necesarias y para qué sirve cada una:
 
-| Peer            | Range     | Powers                                                |
-| --------------- | --------- | ----------------------------------------------------- |
-| `react`         | `^19.0.0` | the editor's rendering                                |
-| `react-dom`     | `^19.0.0` | the editor's rendering                                |
-| `@xyflow/react` | `^12.9.0` | the diagram canvas                                    |
-| `yjs`           | `^13.6.0` | the document model, undo/redo, and live collaboration |
-| `y-protocols`   | `^1.0.6`  | collaboration sync/awareness                          |
+| Peer            | Rango     | Para qué                                                     |
+| --------------- | --------- | ------------------------------------------------------------ |
+| `react`         | `^19.0.0` | el renderizado del editor                                    |
+| `react-dom`     | `^19.0.0` | el renderizado del editor                                    |
+| `@xyflow/react` | `^12.9.0` | el lienzo del diagrama                                       |
+| `yjs`           | `^13.6.0` | el modelo de documento, deshacer/rehacer y la colaboración en vivo |
+| `y-protocols`   | `^1.0.6`  | sincronización y awareness de la colaboración                |
 
-Keeping these external means a host that already uses React or Yjs shares a single instance with the editor instead of loading a private, possibly mismatched copy — no duplicate payload, and no "Invalid hook call" or cross-instance-document errors.
+Mantenerlas externas significa que un host que ya usa React o Yjs comparte una única instancia con el editor en lugar de cargar una copia privada y posiblemente incompatible: sin carga duplicada y sin errores de "Invalid hook call" ni de documentos de instancias distintas.
 
-### Non-React hosts (Angular, Vue, Svelte, vanilla)
+### Hosts que no usan React (Angular, Vue, Svelte, JS puro)
 
-The API is imperative — `new ApollonEditor(container, options)` — and the editor renders its own React tree inside the container, so your own code never imports or touches React. You still install the React peers (the editor uses them internally), but Apollon is the only thing on the page that does.
+La API es imperativa (`new ApollonEditor(container, options)`) y el editor renderiza su propio árbol de React dentro del contenedor, así que tu código nunca importa ni toca React. Aun así debes instalar las peers de React (el editor las usa internamente), pero Apollon es lo único en la página que las usa.
 
-### React hosts
+### Hosts React
 
-Import the `<Apollon>` component, hooks, and provider from the same entry: `import { Apollon } from "@tumaet/apollon"`. They render on the React you already have. Because the package is side-effect-free except for CSS, non-React hosts tree-shake the component and hooks out automatically.
+Importa el componente `<Apollon>`, los hooks y el provider desde la misma entrada: `import { Apollon } from "@tumaet/apollon"`. Se renderizan sobre el React que ya tienes. Como el paquete no tiene efectos secundarios salvo el CSS, los hosts que no usan React eliminan el componente y los hooks por tree-shaking de forma automática.
 
-> **⚠️ Give the container an explicit, non-zero height** (`600px`, `80vh`, or a sized flex/grid child). The canvas sizes itself to its parent, so with no resolvable height it collapses to zero pixels and renders blank. This is the most common embedding mistake. See [Troubleshooting](https://ls1intum.github.io/Apollon/library/troubleshooting).
+> **⚠️ Dale al contenedor una altura explícita y distinta de cero** (`600px`, `80vh` o un hijo de flex/grid con tamaño). El lienzo se ajusta al tamaño de su padre, así que sin una altura resoluble colapsa a cero píxeles y se ve en blanco. Es el error de integración más habitual. Ver [Troubleshooting](https://ls1intum.github.io/Apollon/library/troubleshooting).
 
-## Quick start
+## Inicio rápido
 
 ```ts
 import { ApollonEditor, UMLDiagramType } from "@tumaet/apollon"
@@ -103,13 +113,13 @@ editor.unsubscribe(subscriptionId)
 editor.destroy()
 ```
 
-The editor is client-only. In SSR frameworks (Next.js, Remix, SvelteKit, Nuxt), construct it from a client-side effect, never during render. Always call `editor.destroy()` before re-mounting on the same container.
+El editor es solo de cliente. En frameworks SSR (Next.js, Remix, SvelteKit, Nuxt), constrúyelo desde un efecto del lado del cliente, nunca durante el render. Llama siempre a `editor.destroy()` antes de volver a montar sobre el mismo contenedor.
 
-## Embedding examples
+## Ejemplos de integración
 
 ### React
 
-Render the `<Apollon>` component from `@tumaet/apollon`. It owns the editor's lifecycle: it constructs on mount and destroys on unmount.
+Renderiza el componente `<Apollon>` de `@tumaet/apollon`. Gestiona el ciclo de vida del editor: lo construye al montarse y lo destruye al desmontarse.
 
 ```tsx
 import { Apollon } from "@tumaet/apollon"
@@ -132,9 +142,9 @@ export function DiagramEditor({ initialModel }: { initialModel?: UMLModel }) {
 }
 ```
 
-Reach the instance through `ref`, the `onMount(editor)` callback, or the `useApollonEditor()` hook. See the [React embedding guide](https://ls1intum.github.io/Apollon/library/embedding/react) for hooks, the provider, and SSR.
+Accede a la instancia mediante `ref`, el callback `onMount(editor)` o el hook `useApollonEditor()`. Consulta la [guía de integración con React](https://ls1intum.github.io/Apollon/library/embedding/react) para hooks, provider y SSR.
 
-### Angular (17.3+ signal-based)
+### Angular (17.3+ basado en signals)
 
 ```ts no-check
 import {
@@ -175,11 +185,11 @@ export class DiagramEditorComponent {
 }
 ```
 
-`afterNextRender` runs only in the browser, so this is SSR-safe.
+`afterNextRender` se ejecuta solo en el navegador, por lo que es seguro con SSR.
 
-### Vanilla JS / CDN
+### JS puro / CDN
 
-`yjs` and `y-protocols` are required peers, but on the CDN path esm.sh resolves and serves them from the import URL automatically — there is nothing extra to load. (With a bundler you install the peers yourself.)
+`yjs` y `y-protocols` son peers obligatorias, pero en la vía CDN esm.sh las resuelve y sirve automáticamente desde la URL de importación: no hay nada extra que cargar. (Con un bundler, instalas las peers tú mismo.)
 
 ```html
 <link rel="stylesheet" href="https://esm.sh/@tumaet/apollon@5.3.0/style.css" />
@@ -199,15 +209,15 @@ export class DiagramEditorComponent {
 </script>
 ```
 
-> **⚠️ Pin an exact version**, as the URLs above do. An unpinned CDN URL resolves to `latest`, so a new major can land on the next page refresh and break your embed.
+> **⚠️ Fija una versión exacta**, como hacen las URLs anteriores. Una URL de CDN sin fijar se resuelve a `latest`, de modo que una nueva versión mayor puede llegar en la siguiente recarga de la página y romper tu integración.
 
-## Supported diagrams
+## Diagramas soportados
 
-Class, Object, Activity, Use Case, Communication, Component, Deployment, Petri Net, Reachability Graph, Syntax Tree, Flowchart, BPMN, SFC. The `UMLDiagramType` enum holds the exact string values.
+Clases, Objetos, Actividad, Casos de uso, Comunicación, Componentes, Despliegue, Redes de Petri, Grafo de alcanzabilidad, Árbol sintáctico, Diagrama de flujo, BPMN, SFC. El enum `UMLDiagramType` contiene los valores de cadena exactos.
 
-## Real-time collaboration
+## Colaboración en tiempo real
 
-Collaboration is opt-in and transport-agnostic. Set `collaborationEnabled: true`, then wire up your transport:
+La colaboración es opcional e independiente del transporte. Establece `collaborationEnabled: true` y conecta tu transporte:
 
 ```ts no-check
 const editor = new ApollonEditor(container, { collaborationEnabled: true })
@@ -219,7 +229,7 @@ editor.sendBroadcastMessage((base64) => transport.send(base64))
 transport.onMessage((base64) => editor.receiveBroadcastedMessage(base64))
 ```
 
-To let the library render participant presence, live cursors, and remote node/edge selection highlights, pass the optional `collaboration` UI config:
+Para que la librería dibuje la presencia de los participantes, los cursores en vivo y el resaltado remoto de la selección de nodos y aristas, pasa la configuración opcional de interfaz `collaboration`:
 
 ```ts no-check
 const editor = new ApollonEditor(container, {
@@ -231,23 +241,20 @@ const editor = new ApollonEditor(container, {
 })
 ```
 
-Any Yjs-compatible transport works: `y-websocket`, `y-webrtc`, BroadcastChannel, or your own relay. Cursor and selection awareness travel on the same channel. See [Collaboration](https://ls1intum.github.io/Apollon/library/api/collaboration).
+Sirve cualquier transporte compatible con Yjs: `y-websocket`, `y-webrtc`, BroadcastChannel o tu propio relay. El cursor y el awareness de la selección viajan por el mismo canal. Ver [Collaboration](https://ls1intum.github.io/Apollon/library/api/collaboration).
 
-## Export
+## Exportación
 
-- **SVG**: `await editor.exportAsSVG(options)` resolves to `{ svg, clip }`. `svgMode: "web"` (the default) keeps CSS variables for theme-adaptive output; `"compat"` inlines them for PDF and Inkscape.
-- **JSON**: `editor.model` returns the `UMLModel`, and assigning it back is round-trip safe. Use `importDiagram(json)` to normalize older v2/v3 models first.
-- **Headless**: `ApollonEditor.exportModelAsSvg(model, options)` renders a model without a mounted editor.
-- **PNG / PDF**: not built in, but the library ships `svgToPng` / `svgToPdf` renderers under [`@tumaet/apollon/export`](https://ls1intum.github.io/Apollon/library/api/export) (PNG via `@resvg/resvg-wasm`, PDF via `svg2pdf.js` + `jspdf` — optional dependencies that install automatically with the package). The standalone server in this repo renders server-side instead, with `@napi-rs/canvas` (PNG) and `pdfmake` (PDF).
+- **SVG**: `await editor.exportAsSVG(options)` devuelve `{ svg, clip }`. `svgMode: "web"` (el valor por defecto) conserva las variables CSS para una salida que se adapta al tema; `"compat"` las incrusta para PDF e Inkscape.
+- **JSON**: `editor.model` devuelve el `UMLModel`, y volver a asignarlo es seguro en ambos sentidos. Usa `importDiagram(json)` para normalizar antes los modelos antiguos v2/v3.
+- **Sin interfaz (headless)**: `ApollonEditor.exportModelAsSvg(model, options)` renderiza un modelo sin un editor montado.
+- **PNG / PDF**: no vienen integrados, pero la librería incluye los renderizadores `svgToPng` / `svgToPdf` en [`@tumaet/apollon/export`](https://ls1intum.github.io/Apollon/library/api/export) (PNG con `@resvg/resvg-wasm`, PDF con `svg2pdf.js` + `jspdf`, dependencias opcionales que se instalan automáticamente con el paquete). El servidor de este repositorio ([`services/diagrams-backend`](../services/diagrams-backend/README.md)) renderiza en el servidor, con `@napi-rs/canvas` (PNG) y `pdfmake` (PDF).
 
-See [Export](https://ls1intum.github.io/Apollon/library/api/export) for the full `ExportOptions`.
+Consulta [Export](https://ls1intum.github.io/Apollon/library/api/export) para ver todas las `ExportOptions`.
 
-## Theming
+## Temas
 
-Theme the editor through the `--apollon-*` CSS custom properties (typed via
-`createApollonTheme`) plus a `data-theme` light/dark switch — framework-agnostic,
-Tailwind-free. A first rebrand is three tokens: `primary`, `background`,
-`foreground`.
+Personaliza el editor mediante las propiedades CSS personalizadas `--apollon-*` (tipadas con `createApollonTheme`) más un selector `data-theme` claro/oscuro; es independiente del framework y no requiere Tailwind. Un primer cambio de marca son tres tokens: `primary`, `background` y `foreground`.
 
 ```tsx
 import { Apollon, createApollonTheme } from "@tumaet/apollon"
@@ -264,24 +271,23 @@ declare const dark: boolean // your app's light/dark state
 />
 ```
 
-See [Theming](https://ls1intum.github.io/Apollon/library/theming) (or
-[`THEMING.md`](./THEMING.md)) for the full contract, dark mode, and host patterns.
+Consulta [Theming](https://ls1intum.github.io/Apollon/library/theming) (o [`THEMING.md`](./THEMING.md)) para el contrato completo, el modo oscuro y los patrones de integración en el host.
 
-## Documentation
+## Documentación
 
-- [Library overview](https://ls1intum.github.io/Apollon/library/): install, quickstart, embedding
-- [Theming](https://ls1intum.github.io/Apollon/library/theming): the `--apollon-*` contract, `createApollonTheme`, light/dark
-- [API reference](https://ls1intum.github.io/Apollon/library/api): the full `ApollonEditor` and `<Apollon>` surface
-- [Troubleshooting](https://ls1intum.github.io/Apollon/library/troubleshooting): blank canvas, SSR, duplicate React, and other gotchas
+- [Resumen de la librería](https://ls1intum.github.io/Apollon/library/): instalación, inicio rápido, integración
+- [Theming](https://ls1intum.github.io/Apollon/library/theming): el contrato `--apollon-*`, `createApollonTheme`, claro/oscuro
+- [Referencia de la API](https://ls1intum.github.io/Apollon/library/api): toda la superficie de `ApollonEditor` y `<Apollon>`
+- [Troubleshooting](https://ls1intum.github.io/Apollon/library/troubleshooting): lienzo en blanco, SSR, React duplicado y otros problemas habituales
 
-The server-side wire protocol is exposed through the `@tumaet/apollon/internals` subpath. It is unstable and not covered by SemVer.
+El protocolo de comunicación del lado servidor se expone mediante el subpath `@tumaet/apollon/internals`. Es inestable y no está cubierto por SemVer.
 
-## Related
+## Relacionado
 
-- Source and issues: <https://github.com/ls1intum/Apollon>
-- Live editor: <https://apollon.aet.cit.tum.de>
-- The standalone web editor, collaboration server, and [VS Code extension](https://marketplace.visualstudio.com/items?itemName=aet-tum.apollon-extension) live in the same monorepo.
+- Código fuente e incidencias: <https://github.com/ls1intum/Apollon>
+- Editor en vivo: <https://apollon.aet.cit.tum.de>
+- La webapp standalone y el servidor de colaboración están en este monorepo ([`webapp/`](../webapp/README.md) y [`services/diagrams-backend/`](../services/diagrams-backend/README.md)). La [extensión de VS Code](https://marketplace.visualstudio.com/items?itemName=aet-tum.apollon-extension) y la carpeta `docs/` del repositorio original de Apollon no se importaron a ApollonCASE, por lo que los enlaces a `docs/static` de arriba apuntan al repositorio upstream.
 
-## License
+## Licencia
 
-MIT. See [LICENSE](https://github.com/ls1intum/Apollon/blob/main/LICENSE).
+MIT. Ver [LICENSE](https://github.com/ls1intum/Apollon/blob/main/LICENSE).
