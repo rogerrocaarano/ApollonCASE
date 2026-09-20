@@ -67,13 +67,21 @@ npm run storybook --workspace=@tumaet/webapp             # Storybook (editor + @
 
 `services/diagrams-backend` **no se modifica** y no tiene autenticación: conocer el identificador de un diagrama basta para leerlo, escribirlo, borrarlo o unirse a su sala de colaboración. Por eso, cuando existan usuarios y permisos, quedará en una red privada y todo el acceso pasará por `services/extension-backend`, que actuará como puerta de entrada única.
 
-```
-Navegador ──► extension-backend ──► diagrams-backend ──► Redis
-             (JWT de Keycloak,     (red privada,        (diagramas,
-              permisos en           sin cambios)         colaboración)
-              PostgreSQL,
-              proxy REST + WebSocket)
-```
+### Diagramas C4
+
+**Contexto**: ApollonCASE, sus usuarios y los sistemas externos.
+
+![Diagrama de contexto de ApollonCASE](docs/architecture/ApollonCASE-context.svg)
+
+**Contenedores**: la webapp solo habla con Keycloak y con `extension-backend`; `diagrams-backend` queda detrás de esta.
+
+![Diagrama de contenedores de ApollonCASE](docs/architecture/ApollonCASE-containers.svg)
+
+**Componentes de `extension-backend`**:
+
+![Diagrama de componentes de extension-backend](docs/architecture/ApollonCASE-extension-backend-components.svg)
+
+El modelo C4 de ApollonCASE (contexto, contenedores y componentes) se documenta en [docs/architecture](docs/architecture): `model.json` y `llms.txt` son exports de IcePanel filtrados a este proyecto. Para actualizarlos, vuelve a exportar desde IcePanel y filtra de nuevo lo que no pertenezca a ApollonCASE.
 
 El análisis de alternativas y sus tradeoffs está en [services/extension-backend/README.md](services/extension-backend/README.md#exposición-de-la-api-de-diagramas). Los compose actuales aún no aíslan el backend; eso llegará con `extension-backend`.
 

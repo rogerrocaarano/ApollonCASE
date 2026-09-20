@@ -16,15 +16,11 @@ Backend **Spring Boot + PostgreSQL** que incorpora las funciones nuevas de Apoll
 
 `diagrams-backend` **no se modifica**. No tiene autenticación: el `diagramId` actúa como una capacidad (quien lo conoce puede leer, escribir y borrar el diagrama y unirse a su sala), la cookie de propietario es solo "fricción, no seguridad" y el relay WebSocket no distingue lectores de editores. Con permisos por usuario no puede quedar expuesto: vivirá en una red privada y todo acceso pasará por este servicio.
 
-```
-Navegador ──► extension-backend ──► diagrams-backend ──► Redis
-  (token       · valida JWT          · REST :8000         · diagramas
-  Keycloak)    · resuelve permisos   · WebSocket :4444    · versiones
-               · proxya REST + WS    (red privada,         · colaboración
-                                      sin cambios)
-                     │
-                     └──► PostgreSQL (usuarios, proyectos, permisos, diagramId ↔ proyecto)
-```
+![Diagrama de contenedores de ApollonCASE](../../docs/architecture/ApollonCASE-containers.svg)
+
+Componentes internos de este servicio:
+
+![Diagrama de componentes de extension-backend](../../docs/architecture/ApollonCASE-extension-backend-components.svg)
 
 La webapp solo tendría que apuntar `VITE_SERVER_URL` y `VITE_SERVER_URL_WSS` (ya configurables) a este servicio y enviar el token; `library` y `diagrams-backend` no cambian.
 
