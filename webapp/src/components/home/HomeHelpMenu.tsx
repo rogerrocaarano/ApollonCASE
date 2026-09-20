@@ -1,11 +1,15 @@
 import { useState } from "react"
-import { ChevronDownIcon, CircleHelpIcon } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { ChevronDownIcon, CircleHelpIcon, LogOutIcon } from "lucide-react"
 import { Link } from "@tanstack/react-router"
+import { useAuth } from "react-oidc-context"
 import { Button } from "@tumaet/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@tumaet/ui/components/dropdown-menu"
@@ -23,6 +27,7 @@ import {
   type ChromeReveal,
 } from "@/components/navbar/styleConstants"
 import { MOBILE_MENU_CONTENT_CLASS } from "@/components/navbar/islandPrimitives"
+import { ExtensionApiClient } from "@/services/ExtensionApiClient"
 import { useHelpMenu } from "./useHelpMenu"
 
 /**
@@ -62,6 +67,16 @@ export function HelpMenuItems({
   // Impure wiring (modal opening + router-derived legal provenance) lives in the
   // hook; the item rendering below stays pure relative to its outputs.
   const { legalLinkState, openHowToUse, openAbout } = useHelpMenu(variant)
+  const auth = useAuth()
+  // Exercises the Authorization header end-to-end against extension-backend
+  // (see openspec/changes/add-keycloak-auth) - not just a login formality.
+  const { data: currentUser } = useQuery({
+    queryKey: ["extension-backend", "me"],
+    queryFn: ExtensionApiClient.me,
+    enabled: auth.isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
 
   return (
     <>
@@ -143,6 +158,27 @@ export function HelpMenuItems({
           </Link>
         }
       />
+      {auth.isAuthenticated && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            {currentUser && (
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                Signed in as {currentUser.keycloakId}
+              </DropdownMenuLabel>
+            )}
+            <DropdownMenuItem
+              onClick={() => {
+                onSelect()
+                void auth.signoutRedirect()
+              }}
+            >
+              <LogOutIcon className="size-4" aria-hidden />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </>
+      )}
     </>
   )
 }

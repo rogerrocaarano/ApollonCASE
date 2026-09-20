@@ -1,6 +1,9 @@
 import React, { ReactNode } from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import { AuthProvider } from "react-oidc-context"
+import { AuthGate } from "@/auth/AuthGate"
+import { onSigninCallback, userManager } from "@/auth/oidcConfig"
 import { EditorProvider, ModalProvider } from "@/contexts"
 import { queryClient } from "@/queryClient"
 
@@ -32,11 +35,15 @@ const SHOW_QUERY_DEVTOOLS =
 
 export const AppProviders: React.FC<Props> = ({ children }) => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <EditorProvider>
-        <ModalProvider>{children}</ModalProvider>
-      </EditorProvider>
-      {SHOW_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    <AuthProvider userManager={userManager} onSigninCallback={onSigninCallback}>
+      <QueryClientProvider client={queryClient}>
+        <EditorProvider>
+          <ModalProvider>
+            <AuthGate>{children}</AuthGate>
+          </ModalProvider>
+        </EditorProvider>
+        {SHOW_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </AuthProvider>
   )
 }
