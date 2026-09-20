@@ -6,10 +6,12 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -30,6 +32,16 @@ class ProjectsController(
 ) {
 
     @Operation(
+        summary = "Lista los proyectos del usuario autenticado",
+        description = "Solo devuelve los proyectos de los que el usuario autenticado es owner, ordenados por fecha de modificación descendente."
+    )
+    @GetMapping
+    fun listProjects(
+        @AuthenticationPrincipal jwt: Jwt,
+    ): List<ProjectResponse> =
+        projectsService.listOwnProjects(jwt.requiredSubject).map { it.toResponse() }
+
+    @Operation(
         summary = "Obtiene un proyecto por id",
         description = "Solo el owner del proyecto puede consultarlo.",
         responses = [ApiResponse(responseCode = "403", description = "El usuario autenticado no es el owner del proyecto")]
@@ -42,12 +54,24 @@ class ProjectsController(
         projectsService.getProject(projectId, jwt.requiredSubject).toResponse()
 
     @Operation(
+        summary = "Lista los diagramas de un proyecto",
+        description = "Solo el owner del proyecto puede consultarlos.",
+        responses = [ApiResponse(responseCode = "403", description = "El usuario autenticado no es el owner del proyecto")]
+    )
+    @GetMapping("/{projectId}/diagrams")
+    fun listProjectDiagrams(
+        @Parameter(description = "Id del proyecto") @PathVariable projectId: UUID,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): List<DiagramResponse> =
+        projectsService.listProjectDiagrams(projectId, jwt.requiredSubject).map { it.toResponse() }
+
+    @Operation(
         summary = "Crea un proyecto",
         description = "El usuario autenticado queda como owner del proyecto creado."
     )
     @PostMapping
     fun createProject(
-        @RequestBody request: CreateProjectRequest,
+        @Valid @RequestBody request: CreateProjectRequest,
         @AuthenticationPrincipal jwt: Jwt,
     ): ResponseEntity<ProjectResponse> {
         val owner = usersService.trackKeycloakUser(jwt.requiredSubject)
@@ -85,4 +109,33 @@ class ProjectsController(
         @AuthenticationPrincipal jwt: Jwt,
     ): DiagramResponse =
         projectsService.linkDiagramToProject(projectId, request.redisId, jwt.requiredSubject).toResponse()
+
+    @Operation(
+        summary = "Elimina un diagrama de un proyecto",
+        description = "Borra el diagrama en extension-backend y su cuerpo en diagrams-backend. Solo el owner del proyecto puede hacerlo.",
+        responses = [ApiResponse(responseCode = "403", description = "El usuario autenticado no es el owner del proyecto")]
+    )
+    @DeleteMapping("/{projectId}/diagrams/{diagramId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteDiagram(
+        @Parameter(description = "Id del proyecto") @PathVariable projectId: UUID,
+        @Parameter(description = "Id del diagrama") @PathVariable diagramId: UUID,
+        @AuthenticationPrincipal jwt: Jwt,
+    ) {
+        projectsService.deleteDiagram(projectId, diagramId, jwt.requiredSubject)
+    }
+
+    @Operation(
+        summary = "Elimina un proyecto",
+        description = "Borra también todos sus diagramas, en extension-backend y en diagrams-backend. Solo el owner puede hacerlo.",
+        responses = [ApiResponse(responseCode = "403", description = "El usuario autenticado no es el owner del proyecto")]
+    )
+    @DeleteMapping("/{projectId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteProject(
+        @Parameter(description = "Id del proyecto") @PathVariable projectId: UUID,
+        @AuthenticationPrincipal jwt: Jwt,
+    ) {
+        projectsService.deleteProject(projectId, jwt.requiredSubject)
+    }
 }

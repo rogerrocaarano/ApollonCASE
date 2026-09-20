@@ -7,3 +7,6 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri=http://<keycloak-host>:9000
 
 # Origin(s) the webapp is served from, for CORS.
 app.cors.allowed-origins=http://localhost:5173,http://localhost:8080
+
+# diagrams-backend, for deleting a diagram's body when it (or its project) is deleted.
+app.diagrams-backend.base-url=http://localhost:8000

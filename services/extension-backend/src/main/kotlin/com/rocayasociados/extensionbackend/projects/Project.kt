@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 
 @Entity
@@ -39,5 +40,14 @@ class Project(
         fetch = FetchType.LAZY
     )
     var diagrams: MutableList<Diagram> = mutableListOf(),
+
+    // `columnDefinition` gives `ddl-auto=update` a SQL-level DEFAULT so adding
+    // this NOT NULL column doesn't fail against the existing (pre-this-change)
+    // rows in the shared dev "projects" table.
+    @Column(nullable = false, columnDefinition = "timestamptz default now()")
+    var createdAt: Instant = Instant.now(),
+
+    @Column(nullable = false, columnDefinition = "timestamptz default now()")
+    var updatedAt: Instant = Instant.now(),
 ) {
 }
