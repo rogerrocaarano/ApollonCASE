@@ -3,4 +3,7 @@ spring.datasource.username=user
 spring.datasource.password=password
 spring.jpa.hibernate.ddl-auto=update
 
-spring.security.oauth2.resourceserver.jwt.issuer-uri=keycloakHost/realms/realmId
+spring.security.oauth2.resourceserver.jwt.issuer-uri=http://<keycloak-host>:9000/realms/ApollonCASE
+
+# Origin(s) the webapp is served from, for CORS.
+app.cors.allowed-origins=http://localhost:5173,http://localhost:8080
