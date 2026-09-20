@@ -1,0 +1,50 @@
+# Tasks
+
+## 1. `extension-backend` — data model
+
+- [x] 1.1 Add `createdAt`/`updatedAt` (`Instant`, set on creation and bumped on update) to `Project` in `services/extension-backend/src/main/kotlin/.../projects/Project.kt`; include both in `ProjectResponse`/`toResponse()` in `ProjectDtos.kt`. Verify: `./gradlew build` compiles and `ProjectResponse` serializes the new fields.
+- [x] 1.2 Add `@field:NotBlank` to `CreateProjectRequest.name` in `ProjectDtos.kt` (project already depends on `spring-boot-starter-validation`) and `@Valid` on the controller parameter in `ProjectsController.kt`. Verify: a manual `POST` with `"name": ""` returns 400, not a created project.
+- [x] 1.3 Bump a project's `updatedAt` in `ProjectsService.changeProjectName`/`changeProjectDescription` and when a diagram is linked to it (`linkDiagramToProject`). Verify: a unit/integration test asserts `updatedAt` changes after each of these operations.
+
+## 2. `extension-backend` — list endpoints
+
+- [x] 2.1 Add `findAllByOwnerKeycloakId(keycloakId: String, sort: Sort): List<Project>` (or equivalent) to `ProjectsRepository.kt`, sorted by `updatedAt` descending. Verify: a repository test returns only the calling owner's projects, most-recently-updated first.
+- [x] 2.2 Add `GET /api/v1/projects` to `ProjectsController.kt` (delegates to a new `ProjectsService.listOwnProjects(requesterKeycloakId)`), returning `List<ProjectResponse>`. Verify: `ProjectsControllerTest` (new file, mirroring `UsersControllerTest.kt`) checks it returns only the caller's own projects and an empty list when they have none.
+- [x] 2.3 Add `findAllByProjectId(projectId: UUID): List<Diagram>` to `DiagramsRepository.kt` and `GET /api/v1/projects/{projectId}/diagrams` to `ProjectsController.kt` (owner-checked via the existing `getOwnedProjectOrThrow`), returning `List<DiagramResponse>`. Verify: test covers a project with diagrams, an empty project, and a 403/404 for a non-owner.
+- [x] 2.4 Verify authorization end-to-end: extend `ProjectsControllerTest` with cases for a non-owner calling `GET /{id}`, `GET /{id}/diagrams`, `PATCH /{id}`, and `POST /{id}/diagrams` — each SHALL be rejected (matches the "Only the owner can access a project" spec requirement).
+
+## 3. `webapp` — API client
+
+- [x] 3.1 Add `ProjectsApiClient` (new file `webapp/src/services/ExtensionApiClient.ts` or a sibling module) with `list()`, `create({name, description})`, `rename(id, {name?, description?})`, `listDiagrams(id)`, and `linkDiagram(id, redisId)`, following the existing `request()`/bearer-token pattern already in `ExtensionApiClient.ts`. Verify: a unit test per method mocks `fetch` and asserts URL, method, and auth header.
+- [x] 3.2 Add the corresponding response types (`ProjectResponse`, `DiagramResponse` shapes) to `webapp/src/types`. Verify: TypeScript compiles with no `any` leaking from the client.
+
+## 4. `webapp` — Projects screen (replaces Home)
+
+- [x] 4.1 Build a `ProjectsPage` + `ProjectGallery`/`ProjectCard` set under `webapp/src/pages` and `webapp/src/components/projects`, modeled on the existing `HomePage`/`DiagramGallery`/`DiagramCard` structure, listing projects from `ProjectsApiClient.list()` (name, description, diagram count if available, last-modified). Verify: Storybook stories for `ProjectCard`/`ProjectGallery` (empty, single, many) render as with existing `DiagramCard.stories.tsx`.
+- [x] 4.2 Add a "New project" action opening a create dialog (name + description, reusing `HomeDialog*` primitives from `components/modals/HomeDialog.tsx`) that calls `ProjectsApiClient.create` and inserts the result into the list. Verify: a component test drives the dialog end-to-end against a mocked client and asserts the new project appears.
+- [x] 4.3 Add an inline/dialog rename action per project card calling `ProjectsApiClient.rename`. Verify: a component test asserts the displayed name/description updates after a successful rename and that an error surfaces (toast) on failure.
+- [x] 4.4 Repoint the `/` route (`webapp/src/routes/index.tsx`) at `ProjectsPage` instead of `HomePage`. Verify: `npm run test --workspace=@tumaet/webapp` and manual check that `/` shows the Projects screen after login.
+
+## 5. `webapp` — Project detail screen
+
+- [x] 5.1 Add a `/projects/$id` route + `ProjectDetailPage` showing the project's diagrams, fetching diagram rows via `ProjectsApiClient.listDiagrams(id)` and then resolving each one's title/type/thumbnail from `diagrams-backend` via the existing `DiagramApiClient.fetchStoredDiagram`, reusing `DiagramCard` — the same two-step resolution `DiagramGallery` already uses for shared diagrams. Verify: a component test with a mocked `ProjectsApiClient` + `DiagramApiClient` renders the resolved cards, and one card renders a failure state if `fetchStoredDiagram` rejects for that id (mirroring `DiagramGallery`'s per-entry try/catch).
+- [x] 5.2 Wire "open project" navigation from `ProjectCard`/`ProjectGallery` to `/projects/$id`. Verify: clicking a project card in a component/e2e test navigates to its detail route.
+
+## 6. `webapp` — diagram creation moves inside a project
+
+- [x] 6.1 Change `NewDiagramModal`'s `handleCreateDiagram`/`handleCreateFromTemplate` (`webapp/src/components/modals/NewDiagramModal.tsx`) to, when opened from a project: call `DiagramApiClient.createDiagram(model)` against `diagrams-backend`, then `await ProjectsApiClient.linkDiagram(projectId, result.id)`, then `navigate({ to: "/shared/$diagramId", params: { diagramId: result.id } })` — replacing the current local-store + `/local/$id` path for this entry point. Block navigation on the link call's success and surface an error (toast) if either call fails, per design.md's risk note. Verify: a test asserts both calls happen in order before navigation, and that navigation does not happen if the link call rejects.
+- [x] 6.2 Thread the current project id into the modal's open call (the existing `dialogVariant`-style options mechanism in `useModalContext`) from `ProjectDetailPage`'s "New diagram" action. Verify: opening the modal from a project detail page and creating a diagram lands it in that project's diagram list on return.
+
+## 7. `extension-backend` and `webapp` — delete projects and diagrams
+
+- [x] 7.1 Add `app.diagrams-backend.base-url` config property (`application.properties`/`application-local.properties(.example)`) and a `DiagramsBackendClient` (Spring `RestClient`) with a `deleteDiagram(redisId: String)` method that calls `DELETE {base-url}/api/diagrams/{redisId}`, treating a `404` response as success. Verify: a unit test (mocked `RestClient`/`MockRestServiceServer`) covers both the 2xx and 404-as-success cases, and that a 5xx propagates as a failure.
+- [x] 7.2 Add `ProjectsService.deleteDiagram(projectId, diagramId, requesterKeycloakId)`: owner-checked, calls `DiagramsBackendClient.deleteDiagram` for the diagram's `redisId`, then removes the `Diagram` row. Add `DELETE /api/v1/projects/{projectId}/diagrams/{diagramId}` to `ProjectsController.kt`. Verify: `ProjectsControllerTest` covers success, a diagram id that doesn't belong to the project, and a non-owner (403).
+- [x] 7.3 Add `ProjectsService.deleteProject(projectId, requesterKeycloakId)`: owner-checked, calls `DiagramsBackendClient.deleteDiagram` for every diagram in the project (fetched via a fresh repository query, not the `Project.diagrams` association, which can be stale relative to concurrent inserts on the owning side), then deletes the `Diagram` rows and the `Project` row explicitly. Add `DELETE /api/v1/projects/{projectId}` to `ProjectsController.kt`. Verify: `ProjectsControllerTest` covers an empty project, a project with diagrams, and a non-owner (403).
+- [x] 7.4 Add `ProjectsApiClient.deleteProject(id)` and `ProjectsApiClient.deleteDiagram(projectId, diagramId)` to `webapp/src/services/ExtensionApiClient.ts`. Verify: unit tests mock `fetch` and assert URL/method, matching the existing client test pattern.
+- [x] 7.5 Add a "Delete" action to `ProjectCard`'s actions menu and to `ProjectDetailPage`'s header, each behind a confirmation (`AlertDialog`, matching `DiagramCard`'s existing confirm-before-destructive-action pattern), calling `ProjectsApiClient.deleteProject` and then removing the project from the list (`ProjectsPage`) or navigating back to `/` (`ProjectDetailPage`). Verify: component tests cover confirm → delete → list/navigation update, and cancel → no call made.
+- [x] 7.6 Add an actions menu with a confirmed "Delete" action to `ProjectDiagramCard`, calling a new `ProjectsApiClient.deleteDiagram(projectId, diagram.id)` (the `ResolvedProjectDiagram` type needs to carry the `extension-backend` diagram id alongside `redisId`) and removing the diagram from `ProjectDetailPage`'s list on success. Verify: a component test covers confirm → delete → list update.
+
+## 8. End-to-end verification
+
+- [x] 8.1 Manually exercise the full flow against a running stack (per `scripts/dev.ps1`/`dev.sh` plus the developer's own Keycloak/Postgres): log in, land on Projects (empty state), create a project, create a diagram inside it, confirm it opens in the collaborative editor and autosaves, navigate back and confirm it's listed under the project, rename the project and confirm the new name persists after a reload, delete a diagram and confirm it disappears, delete the project and confirm it disappears from the list and its diagram is gone from `diagrams-backend`.
+- [x] 8.2 Run the full test suites and confirm they pass: `npm run test --workspace=@tumaet/webapp` (356/356), `./gradlew test` in `services/extension-backend` (26/27 — the one failure, `ExtensionBackendApplicationTests.contextLoads`, is pre-existing and unrelated, reproduces identically on a clean `main` checkout). `npm run test:e2e --workspace=@tumaet/webapp` is explicitly deferred: `webapp/tests/e2e/home-page.spec.ts` asserts the old `"Your diagrams"` heading at `/` and needs a rewrite for the Projects screen — pre-existing debt from the Keycloak-login change (which never updated e2e for the login requirement either), not a regression from `add-projects`. Left as known technical debt per explicit decision; not blocking this change.
