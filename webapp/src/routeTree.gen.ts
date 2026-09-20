@@ -15,6 +15,7 @@ import { Route as ImprintRouteImport } from "./routes/imprint"
 import { Route as IdRouteImport } from "./routes/$id"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as SharedDiagramIdRouteImport } from "./routes/shared.$diagramId"
+import { Route as ProjectsIdRouteImport } from "./routes/projects.$id"
 import { Route as LocalIdRouteImport } from "./routes/local.$id"
 
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -47,6 +48,11 @@ const SharedDiagramIdRoute = SharedDiagramIdRouteImport.update({
   path: "/shared/$diagramId",
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsIdRoute = ProjectsIdRouteImport.update({
+  id: "/projects/$id",
+  path: "/projects/$id",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LocalIdRoute = LocalIdRouteImport.update({
   id: "/local/$id",
   path: "/local/$id",
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   "/playground": typeof PlaygroundRoute
   "/privacy": typeof PrivacyRoute
   "/local/$id": typeof LocalIdRoute
+  "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   "/playground": typeof PlaygroundRoute
   "/privacy": typeof PrivacyRoute
   "/local/$id": typeof LocalIdRoute
+  "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   "/playground": typeof PlaygroundRoute
   "/privacy": typeof PrivacyRoute
   "/local/$id": typeof LocalIdRoute
+  "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | "/playground"
     | "/privacy"
     | "/local/$id"
+    | "/projects/$id"
     | "/shared/$diagramId"
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | "/playground"
     | "/privacy"
     | "/local/$id"
+    | "/projects/$id"
     | "/shared/$diagramId"
   id:
     | "__root__"
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | "/playground"
     | "/privacy"
     | "/local/$id"
+    | "/projects/$id"
     | "/shared/$diagramId"
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   PlaygroundRoute: typeof PlaygroundRoute
   PrivacyRoute: typeof PrivacyRoute
   LocalIdRoute: typeof LocalIdRoute
+  ProjectsIdRoute: typeof ProjectsIdRoute
   SharedDiagramIdRoute: typeof SharedDiagramIdRoute
 }
 
@@ -165,6 +178,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof SharedDiagramIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/projects/$id": {
+      id: "/projects/$id"
+      path: "/projects/$id"
+      fullPath: "/projects/$id"
+      preLoaderRoute: typeof ProjectsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/local/$id": {
       id: "/local/$id"
       path: "/local/$id"
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlaygroundRoute: PlaygroundRoute,
   PrivacyRoute: PrivacyRoute,
   LocalIdRoute: LocalIdRoute,
+  ProjectsIdRoute: ProjectsIdRoute,
   SharedDiagramIdRoute: SharedDiagramIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,6 +1,8 @@
 import React from "react"
 import {
   NewDiagramModal,
+  NewProjectModal,
+  RenameProjectModal,
   ShareModal,
   ShareDashboardModal,
   CollaborateNameModal,
@@ -36,6 +38,8 @@ interface ModalWrapperProps {
 // renderer below.
 const MODAL_COMPONENTS = {
   NEW_DIAGRAM: NewDiagramModal,
+  NEW_PROJECT: NewProjectModal,
+  RENAME_PROJECT: RenameProjectModal,
   SHARE: ShareModal,
   SHARE_DASHBOARD: ShareDashboardModal,
   COLLABORATE_NAME: CollaborateNameModal,
@@ -48,6 +52,8 @@ const MODAL_COMPONENTS = {
 
 const MODAL_TITLES: Record<ModalName, string> = {
   NEW_DIAGRAM: "New Diagram",
+  NEW_PROJECT: "New Project",
+  RENAME_PROJECT: "Rename Project",
   SHARE: "Share",
   SHARE_DASHBOARD: "Share your diagram",
   COLLABORATE_NAME: "Join Collaboration",

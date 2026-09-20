@@ -1,23 +1,66 @@
 import { extensionServerURL } from "@/constants"
 import { getAccessToken } from "@/auth/oidcConfig"
+import type { Project, ProjectDiagram } from "@/types"
 
 export interface CurrentUser {
   id: string
   keycloakId: string
 }
 
-async function request<T>(path: string): Promise<T> {
+interface RequestOpts {
+  method?: "GET" | "POST" | "PATCH" | "DELETE"
+  body?: unknown
+}
+
+async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   const token = await getAccessToken()
   const headers: Record<string, string> = { Accept: "application/json" }
   if (token) headers.Authorization = `Bearer ${token}`
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json"
 
-  const res = await fetch(`${extensionServerURL}${path}`, { headers })
+  const res = await fetch(`${extensionServerURL}${path}`, {
+    method: opts.method ?? "GET",
+    headers,
+    body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+  })
   if (!res.ok) {
     throw new Error(`extension-backend request failed with status ${res.status}`)
+  }
+  if (res.status === 204) {
+    return undefined as unknown as T
   }
   return res.json() as Promise<T>
 }
 
 export const ExtensionApiClient = {
   me: () => request<CurrentUser>("/api/v1/me"),
+}
+
+export const ProjectsApiClient = {
+  list: () => request<Project[]>("/api/v1/projects"),
+
+  get: (id: string) => request<Project>(`/api/v1/projects/${id}`),
+
+  create: (input: { name: string; description: string }) =>
+    request<Project>("/api/v1/projects", { method: "POST", body: input }),
+
+  rename: (id: string, input: { name?: string; description?: string }) =>
+    request<Project>(`/api/v1/projects/${id}`, { method: "PATCH", body: input }),
+
+  listDiagrams: (id: string) =>
+    request<ProjectDiagram[]>(`/api/v1/projects/${id}/diagrams`),
+
+  linkDiagram: (id: string, redisId: string) =>
+    request<ProjectDiagram>(`/api/v1/projects/${id}/diagrams`, {
+      method: "POST",
+      body: { redisId },
+    }),
+
+  deleteProject: (id: string) =>
+    request<void>(`/api/v1/projects/${id}`, { method: "DELETE" }),
+
+  deleteDiagram: (projectId: string, diagramId: string) =>
+    request<void>(`/api/v1/projects/${projectId}/diagrams/${diagramId}`, {
+      method: "DELETE",
+    }),
 }

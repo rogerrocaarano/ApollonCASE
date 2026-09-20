@@ -1,6 +1,7 @@
 import { useState } from "react"
+import { toast } from "react-toastify"
 import { useModalContext } from "@/contexts/ModalContext"
-import { UMLDiagramType } from "@tumaet/apollon"
+import { UMLDiagramType, type UMLModel } from "@tumaet/apollon"
 import { useNavigate } from "@tanstack/react-router"
 import { usePersistenceModelStore } from "@/stores/usePersistenceModelStore"
 import { getDiagramTypeIcon } from "@/components/home/diagramTypeMeta"
@@ -13,6 +14,9 @@ import {
 } from "@tumaet/ui/components/tabs"
 import { log } from "@/logger"
 import { prepareTemplateModel } from "@/utils/templateModels"
+import { DiagramApiClient } from "@/services/DiagramApiClient"
+import { ProjectsApiClient } from "@/services/ExtensionApiClient"
+import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks"
 import {
   HomeDialogActions,
   HomeDialogContent,
@@ -105,7 +109,18 @@ const creationalTemplates: HomeDialogOption<TemplateType>[] = [
   TemplateType.Factory,
 ].map(toTemplateOption)
 
-export const NewDiagramModal = () => {
+export interface NewDiagramModalProps {
+  /**
+   * When set, the modal was opened from a project: creation goes through
+   * `diagrams-backend` + `extension-backend`'s link endpoint and lands in the
+   * collaborative editor, instead of the local (IndexedDB-only) store. See
+   * design.md's "New diagram creation flow" decision in the `add-projects`
+   * change.
+   */
+  projectId?: string
+}
+
+export const NewDiagramModal = ({ projectId }: NewDiagramModalProps) => {
   const { closeModal } = useModalContext()
   const [activeTab, setActiveTab] = useState<"scratch" | "template">("scratch")
   const [selectedDiagramType, setSelectedDiagramType] =
@@ -120,13 +135,48 @@ export const NewDiagramModal = () => {
     useState<boolean>(true)
   const [newDiagramTitle, setNewDiagramTitle] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
+  const [isCreatingInProject, setIsCreatingInProject] = useState(false)
   const navigate = useNavigate()
   const createModelByTitleAndType = usePersistenceModelStore(
     (state) => state.createModelByTitleAndType
   )
   const createModel = usePersistenceModelStore((state) => state.createModel)
 
+  // Creates the diagram body in `diagrams-backend` (same store a `/shared/*`
+  // diagram already uses), links it to the current project, then opens it in
+  // the collaborative editor. Navigation only happens once the link succeeds —
+  // an unlinked-but-created diagram is unreachable, not silently orphaned in
+  // the UI (see design.md's "two-network-call diagram creation" risk).
+  const createDiagramInProject = async (model: UMLModel) => {
+    if (!projectId) return
+    setIsCreatingInProject(true)
+    try {
+      const created = await DiagramApiClient.createDiagram(model)
+      await ProjectsApiClient.linkDiagram(projectId, created.id)
+      closeModal()
+      navigate(sharedDiagramRoute(created.id))
+    } catch (err) {
+      log.error("Failed to create diagram in project", err as Error)
+      toast.error("Could not create the diagram. Please try again.")
+    } finally {
+      setIsCreatingInProject(false)
+    }
+  }
+
   const handleCreateDiagram = () => {
+    if (projectId) {
+      void createDiagramInProject({
+        id: crypto.randomUUID(),
+        type: selectedDiagramType,
+        assessments: {},
+        edges: [],
+        nodes: [],
+        title: newDiagramTitle,
+        version: "4.0.0",
+      })
+      return
+    }
+
     const newId = createModelByTitleAndType(
       newDiagramTitle,
       selectedDiagramType
@@ -184,6 +234,11 @@ export const NewDiagramModal = () => {
         id: crypto.randomUUID(),
         title: newDiagramTitle,
       })
+
+      if (projectId) {
+        await createDiagramInProject(templateModel)
+        return
+      }
 
       createModel(templateModel)
       closeModal()
@@ -308,6 +363,8 @@ export const NewDiagramModal = () => {
       <HomeDialogActions
         cancelLabel="Cancel"
         confirmLabel="Create Diagram"
+        loadingLabel="Creating…"
+        loading={isCreatingInProject}
         onCancel={closeModal}
         onConfirm={() => {
           if (activeTab === "scratch") {

@@ -1,4 +1,6 @@
 export * from "./NewDiagramModal"
+export * from "./NewProjectModal"
+export * from "./RenameProjectModal"
 export * from "./ShareModal"
 export * from "./ShareDashboardModal"
 export * from "./HomeDialog"
