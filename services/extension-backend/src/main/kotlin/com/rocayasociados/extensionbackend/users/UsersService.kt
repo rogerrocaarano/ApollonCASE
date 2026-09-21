@@ -22,11 +22,4 @@ class UsersService(
         if (emailChanged) user.email = tokenEmail
         return if (existing == null || emailChanged) repository.save(user) else user
     }
-
-    fun updateProfile(keycloakId: String, displayName: String?): User {
-        val user = repository.findByKeycloakId(keycloakId)
-            ?: throw NoSuchElementException("User with keycloakId $keycloakId not found")
-        displayName?.let { user.displayName = it }
-        return repository.save(user)
-    }
 }

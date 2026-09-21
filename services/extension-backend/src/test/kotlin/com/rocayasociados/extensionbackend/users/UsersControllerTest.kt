@@ -9,7 +9,6 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -69,56 +68,12 @@ class UsersControllerTest {
     }
 
     @Test
-    fun `usuario nuevo tiene displayName y email vacios`() {
+    fun `usuario nuevo tiene email vacio si el token no lo trae`() {
         val subject = "test-subject-${UUID.randomUUID()}"
 
         mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.displayName").value(nullValue()))
             .andExpect(jsonPath("$.email").value(nullValue()))
-    }
-
-    @Test
-    fun `updateMe con solo displayName no toca el email`() {
-        val subject = "test-subject-${UUID.randomUUID()}"
-        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
-
-        mockMvc.perform(
-            patch("/api/v1/me")
-                .with(jwt().jwt { it.subject(subject) })
-                .contentType("application/json")
-                .content("""{"displayName": "Ada Lovelace"}""")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
-            .andExpect(jsonPath("$.email").value(nullValue()))
-
-        assertEquals("Ada Lovelace", usersRepository.findByKeycloakId(subject)?.displayName)
-        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
-    }
-
-    @Test
-    fun `updateMe ignora un email enviado manualmente`() {
-        val subject = "test-subject-${UUID.randomUUID()}"
-        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
-        mockMvc.perform(
-            patch("/api/v1/me")
-                .with(jwt().jwt { it.subject(subject) })
-                .contentType("application/json")
-                .content("""{"displayName": "Ada Lovelace"}""")
-        )
-
-        mockMvc.perform(
-            patch("/api/v1/me")
-                .with(jwt().jwt { it.subject(subject) })
-                .contentType("application/json")
-                .content("""{"displayName": "Ada Lovelace", "email": "ada@example.com"}""")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.email").value(nullValue()))
-            .andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
-
-        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
     }
 
     @Test
@@ -130,7 +85,6 @@ class UsersControllerTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.email").value("new-user@example.com"))
-            .andExpect(jsonPath("$.displayName").value(nullValue()))
     }
 
     @Test

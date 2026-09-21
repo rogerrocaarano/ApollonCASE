@@ -19,9 +19,6 @@ class User(
     @Column(nullable = false, unique = true)
     var keycloakId: String,
 
-    @Column
-    var displayName: String? = null,
-
     @Column(unique = true)
     var email: String? = null,
 )
