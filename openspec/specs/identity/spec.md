@@ -80,30 +80,32 @@ Al recibir una petición autenticada, `extension-backend` SHALL registrar o recu
 - **THEN** `extension-backend` responde 401
 
 ### Requirement: Gestión del perfil propio
-`extension-backend` SHALL let an authenticated user view and edit their own profile: a display name and an email address. Both fields start empty for a newly created `User` and are never inferred from the Keycloak token — they stay empty until the user sets them.
+`extension-backend` SHALL let an authenticated user view their own profile: a display name and an email address. `displayName` SHALL start empty for a newly created `User` and stay empty until the user sets it — it is never inferred from the Keycloak token. `email` SHALL always reflect the `email` claim of the user's current Keycloak token, synced on every authenticated request; it is system-managed and not a value the user sets independently of their token.
 
-#### Scenario: Nuevo usuario tiene el perfil vacío
-- **WHEN** un usuario autenticado que nunca ha editado su perfil consulta `GET /api/v1/me`
-- **THEN** el `displayName` y el `email` de la respuesta están vacíos
+#### Scenario: Nuevo usuario tiene displayName vacío y email desde el token
+- **WHEN** un usuario se autentica con `extension-backend` por primera vez
+- **THEN** su `User` se crea con `email` igual al claim `email` de su token de Keycloak
+- **AND** su `displayName` queda vacío
 
 #### Scenario: Usuario actualiza su nombre para mostrar
 - **WHEN** un usuario autenticado envía un `displayName` no vacío
 - **THEN** su perfil queda con ese `displayName`
-- **AND** su `email` no se modifica si no se incluyó en la petición
+- **AND** su `email` no se ve afectado por esta petición
 
-#### Scenario: Usuario actualiza su email
-- **WHEN** un usuario autenticado envía un `email` con formato válido
-- **THEN** su perfil queda con ese `email`
-- **AND** su `displayName` no se modifica si no se incluyó en la petición
+#### Scenario: El email se mantiene sincronizado con el token
+- **WHEN** el claim `email` del token de Keycloak de un usuario autenticado difiere del `email` almacenado
+- **THEN** esa petición autenticada actualiza el `email` almacenado para que coincida con el token
+- **AND** esto ocurre automáticamente, sin que el usuario envíe un email en el body de la petición
 
-#### Scenario: Email con formato inválido es rechazado
-- **WHEN** un usuario autenticado envía un `email` que no tiene formato de correo válido
-- **THEN** el perfil no se modifica
-- **AND** la petición es rechazada
+#### Scenario: El perfil ya no acepta un email enviado manualmente
+- **WHEN** un usuario autenticado incluye un campo `email` en una petición de actualización de perfil
+- **THEN** ese campo se ignora o la petición lo rechaza
+- **AND** el `email` almacenado sigue siendo el que provino del token de Keycloak, sin validarse contra lo enviado
 
 #### Scenario: El perfil actualizado se refleja en la identidad expuesta
-- **WHEN** un usuario autenticado que ya tiene `displayName` y/o `email` configurados consulta `GET /api/v1/me`
-- **THEN** la respuesta incluye esos valores
+- **WHEN** un usuario autenticado que ya tiene `displayName` configurado consulta `GET /api/v1/me`
+- **THEN** la respuesta incluye ese `displayName`
+- **AND** incluye el `email` sincronizado desde su token de Keycloak
 
 ### Requirement: La identidad de colaboración proviene del perfil del usuario
 Al entrar a una sesión de diagrama colaborativa, la webapp SHALL identificar al usuario ante otros participantes (nombre y color de cursor) usando el `displayName` de su propio perfil, sin pedirle un nombre por sesión. Si el usuario no tiene `displayName` configurado, la webapp SHALL requerírselo antes de continuar, en vez de generarle uno o dejarlo sin identificar.
