@@ -1,11 +1,16 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useEditorContext, useModalContext } from "@/contexts"
 import {
   ApollonEditor,
   ApollonMode,
   collabColorFromName,
   importDiagram,
-  randomCollabName,
   type ApollonOptions,
   type UMLModel,
 } from "@tumaet/apollon"
@@ -13,6 +18,8 @@ import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-toastify"
 import { DiagramView } from "@/types"
+import { CURRENT_USER_QUERY_KEY, useCurrentUser } from "@/hooks/useCurrentUser"
+import type { CurrentUser } from "@/services/ExtensionApiClient"
 import { WebSocketManager } from "@/services/WebSocketManager"
 import {
   createDiagramAutosaver,
@@ -48,13 +55,6 @@ const route = getRouteApi("/shared/$diagramId")
 /** True for a fetch rejected by its own `AbortController`. */
 function isAbort(err: unknown): boolean {
   return err instanceof DOMException && err.name === "AbortError"
-}
-
-function readStoredCollabUser(): { name: string; color: string } | null {
-  const storedName = sessionStorage.getItem("apollon-collab-name")
-  return storedName
-    ? { name: storedName, color: collabColorFromName(storedName) }
-    : null
 }
 
 export const ApollonShared: React.FC = () => {
@@ -103,8 +103,22 @@ export const ApollonShared: React.FC = () => {
   // re-fingerprinting on every render. False = restoring would be a no-op
   // (e.g. the latest saved version with no unsaved local changes).
   const [canRestoreFromPreview, setCanRestoreFromPreview] = useState(false)
-  const [collaborationUser, setCollaborationUser] =
-    useState(readStoredCollabUser)
+  const { data: currentUser } = useCurrentUser()
+  const displayName = currentUser?.displayName?.trim() || null
+  // Derived, not stored: once `currentUser.displayName` is set (either already,
+  // or just saved via the EDIT_PROFILE prompt below, which updates the shared
+  // query cache), this recomputes on the next render — no separate state to
+  // keep in sync with the account's own name. Memoized on the trimmed name
+  // (a primitive) rather than recreated fresh every render — the editor-mount
+  // effect below depends on this object's identity, and a fresh literal each
+  // render would re-trigger it (and reconnect the editor) continuously.
+  const collaborationUser = useMemo(
+    () =>
+      displayName
+        ? { name: displayName, color: collabColorFromName(displayName) }
+        : null,
+    [displayName]
+  )
 
   const preview = useVersionStore((s) => selectScopedPreview(s, diagramId))
   const restoreMutation = useRestoreVersionMutation(kind, diagramId)
@@ -146,23 +160,33 @@ export const ApollonShared: React.FC = () => {
   const isCollaborationView = viewType === DiagramView.COLLABORATE
   const needsCollabName = isCollaborationView && !collaborationUser
 
-  // A stored name was already picked up by the lazy state initialiser, so
-  // reaching here means there is none. Prompt once per diagram — the seed
-  // query stays disabled until a name exists.
+  // `currentUser` still loading is also `!collaborationUser`, but isn't a
+  // reason to prompt yet — wait for it to resolve one way or the other.
+  // Prompt once per diagram — the seed query stays disabled until a name exists.
   useEffect(() => {
-    if (!viewType || !needsCollabName || hasPromptedRef.current) return
+    if (!viewType || !needsCollabName || !currentUser || hasPromptedRef.current)
+      return
     hasPromptedRef.current = true
-    openModal("COLLABORATE_NAME", {
-      initialName: randomCollabName(),
-      onConfirm: (name: string) => {
-        sessionStorage.setItem("apollon-collab-name", name)
-        setCollaborationUser({ name, color: collabColorFromName(name) })
+    openModal("EDIT_PROFILE", {
+      dialogVariant: "home",
+      user: currentUser,
+      requireDisplayName: true,
+      onUpdated: (updated: CurrentUser) => {
+        queryClient.setQueryData(CURRENT_USER_QUERY_KEY, updated)
       },
       onClose: () => {
         navigate({ to: "/", replace: true })
       },
     })
-  }, [viewType, needsCollabName, diagramId, openModal, navigate])
+  }, [
+    viewType,
+    needsCollabName,
+    currentUser,
+    diagramId,
+    openModal,
+    navigate,
+    queryClient,
+  ])
 
   // One-shot editor seed; while its preconditions are unmet (missing view,
   // unresolved collaboration name) it stays pending, which keeps the overlay up.

@@ -14,9 +14,20 @@ export interface EditProfileModalProps {
   user: CurrentUser
   /** Called with the updated user so the caller can refresh its view. */
   onUpdated?: (user: CurrentUser) => void
+  /**
+   * When set, a display name is mandatory to continue — "Save" stays disabled
+   * until one is entered. The general Help-menu profile edit stays fully
+   * optional (this defaults to `false`); only entry points that need an
+   * identity to proceed (e.g. joining a collaborative session) opt in.
+   */
+  requireDisplayName?: boolean
 }
 
-export const EditProfileModal = ({ user, onUpdated }: EditProfileModalProps) => {
+export const EditProfileModal = ({
+  user,
+  onUpdated,
+  requireDisplayName = false,
+}: EditProfileModalProps) => {
   const { closeModal } = useModalContext()
   const [displayName, setDisplayName] = useState(user.displayName ?? "")
   const [email, setEmail] = useState(user.email ?? "")
@@ -67,6 +78,7 @@ export const EditProfileModal = ({ user, onUpdated }: EditProfileModalProps) => 
         confirmLabel="Save"
         loadingLabel="Saving…"
         loading={isSubmitting}
+        confirmDisabled={requireDisplayName && !displayName.trim()}
         onCancel={closeModal}
         onConfirm={() => void handleSave()}
       />

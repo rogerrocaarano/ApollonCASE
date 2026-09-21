@@ -80,6 +80,32 @@ describe("EditProfileModal", () => {
     expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("")
   })
 
+  it("disables Save with a blank name when requireDisplayName is set", () => {
+    render(
+      <EditProfileModal
+        user={{ id: "u1", keycloakId: "kc-1", displayName: null, email: null }}
+        requireDisplayName
+      />
+    )
+    const button = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement
+    expect(button.disabled).toBe(true)
+
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "New name" },
+    })
+    expect(button.disabled).toBe(false)
+  })
+
+  it("does not disable Save with a blank name when requireDisplayName is unset", () => {
+    render(
+      <EditProfileModal
+        user={{ id: "u1", keycloakId: "kc-1", displayName: null, email: null }}
+      />
+    )
+    const button = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement
+    expect(button.disabled).toBe(false)
+  })
+
   it("shows an error toast and keeps the modal open when saving fails", async () => {
     updateMeMock.mockRejectedValue(new Error("invalid email"))
 

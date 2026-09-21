@@ -9,6 +9,18 @@ import { DiagramApiClient } from "@/services/DiagramApiClient"
 
 const addSharedDiagramEntryMock = vi.fn()
 
+const { meMock } = vi.hoisted(() => ({ meMock: vi.fn() }))
+
+vi.mock("react-oidc-context", () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}))
+
+vi.mock("@/services/ExtensionApiClient", () => ({
+  ExtensionApiClient: {
+    me: () => meMock(),
+  },
+}))
+
 // Holds the page's control-event listener so tests can dispatch a real
 // VERSION_RESTORED the way the server would.
 const wsHoisted = vi.hoisted(() => ({
@@ -257,12 +269,17 @@ beforeEach(() => {
   versionHoisted.state.exitPreview.mockImplementation(() => {
     versionHoisted.state.preview = null
   })
-  sessionStorage.setItem("apollon-collab-name", "tester")
+  meMock.mockReset()
+  meMock.mockResolvedValue({
+    id: "u1",
+    keycloakId: "kc-1",
+    displayName: "tester",
+    email: null,
+  })
 })
 
 afterEach(() => {
   cleanup()
-  sessionStorage.clear()
   vi.restoreAllMocks()
 })
 
@@ -410,13 +427,18 @@ describe("ApollonShared — loading-state regression", () => {
     expect(infoToast).not.toHaveBeenCalled()
   })
 
-  it("re-opens the collab-name prompt for each new un-named diagram", async () => {
-    sessionStorage.removeItem("apollon-collab-name")
+  it("re-opens the profile prompt for each new diagram when no display name is set", async () => {
+    meMock.mockResolvedValue({
+      id: "u1",
+      keycloakId: "kc-1",
+      displayName: null,
+      email: null,
+    })
     const { history } = mountAt("/shared/abc?view=COLLABORATE")
 
     await waitFor(() => {
       expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "COLLABORATE_NAME",
+        "EDIT_PROFILE",
         expect.any(Object)
       )
     })
@@ -427,19 +449,24 @@ describe("ApollonShared — loading-state regression", () => {
     })
     await waitFor(() =>
       expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "COLLABORATE_NAME",
+        "EDIT_PROFILE",
         expect.any(Object)
       )
     )
   })
 
-  it("returns home when the collaboration-name prompt is dismissed", async () => {
-    sessionStorage.removeItem("apollon-collab-name")
+  it("returns home when the profile-completion prompt is dismissed", async () => {
+    meMock.mockResolvedValue({
+      id: "u1",
+      keycloakId: "kc-1",
+      displayName: null,
+      email: null,
+    })
     const { router } = mountAt("/shared/abc?view=COLLABORATE")
 
     await waitFor(() => {
       expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "COLLABORATE_NAME",
+        "EDIT_PROFILE",
         expect.objectContaining({
           onClose: expect.any(Function),
         })

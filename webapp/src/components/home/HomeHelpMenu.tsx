@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   ChevronDownIcon,
   CircleHelpIcon,
@@ -32,8 +32,9 @@ import {
   type ChromeReveal,
 } from "@/components/navbar/styleConstants"
 import { MOBILE_MENU_CONTENT_CLASS } from "@/components/navbar/islandPrimitives"
-import { ExtensionApiClient, type CurrentUser } from "@/services/ExtensionApiClient"
+import type { CurrentUser } from "@/services/ExtensionApiClient"
 import { useModalContext } from "@/contexts"
+import { CURRENT_USER_QUERY_KEY, useCurrentUser } from "@/hooks/useCurrentUser"
 import { useHelpMenu } from "./useHelpMenu"
 
 /**
@@ -78,13 +79,7 @@ export function HelpMenuItems({
   const { openModal } = useModalContext()
   // Exercises the Authorization header end-to-end against extension-backend
   // (see openspec/changes/add-keycloak-auth) - not just a login formality.
-  const { data: currentUser } = useQuery({
-    queryKey: ["extension-backend", "me"],
-    queryFn: ExtensionApiClient.me,
-    enabled: auth.isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
+  const { data: currentUser } = useCurrentUser()
 
   const openEditProfile = () => {
     if (!currentUser) return
@@ -92,7 +87,7 @@ export function HelpMenuItems({
       dialogVariant: "home",
       user: currentUser,
       onUpdated: (updated: CurrentUser) => {
-        queryClient.setQueryData(["extension-backend", "me"], updated)
+        queryClient.setQueryData(CURRENT_USER_QUERY_KEY, updated)
       },
     })
   }

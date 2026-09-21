@@ -37,6 +37,17 @@ const wsHoisted = vi.hoisted(() => ({
   control: null as ((event: ControlEvent) => void) | null,
 }))
 const editorHoisted = vi.hoisted(() => ({ instance: null as unknown }))
+const meHoisted = vi.hoisted(() => ({ me: vi.fn() }))
+
+vi.mock("react-oidc-context", () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}))
+
+vi.mock("@/services/ExtensionApiClient", () => ({
+  ExtensionApiClient: {
+    me: () => meHoisted.me(),
+  },
+}))
 
 const FakeApollonEditor = vi.hoisted(
   () =>
@@ -148,7 +159,13 @@ async function mountEditor({
 }
 
 beforeEach(() => {
-  sessionStorage.setItem("apollon-collab-name", "tester")
+  meHoisted.me.mockReset()
+  meHoisted.me.mockResolvedValue({
+    id: "u1",
+    keycloakId: "kc-1",
+    displayName: "tester",
+    email: null,
+  })
   wsHoisted.control = null
   editorHoisted.instance = null
   fetchDiagram.mockReset()
