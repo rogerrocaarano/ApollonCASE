@@ -23,6 +23,12 @@ class User(
     @Column(nullable = false, unique = true)
     var keycloakId: String,
 
+    @Column
+    var displayName: String? = null,
+
+    @Column
+    var email: String? = null,
+
     @OneToMany(
         mappedBy = "owner",
         cascade = [CascadeType.ALL],

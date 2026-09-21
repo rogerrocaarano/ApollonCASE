@@ -9,9 +9,11 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
+import org.hamcrest.Matchers.nullValue
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -64,5 +66,71 @@ class UsersControllerTest {
             usersRepository.findAll().count { it.keycloakId == subject },
             "El segundo request no debe crear un User duplicado",
         )
+    }
+
+    @Test
+    fun `usuario nuevo tiene displayName y email vacios`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+
+        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.displayName").value(nullValue()))
+            .andExpect(jsonPath("$.email").value(nullValue()))
+    }
+
+    @Test
+    fun `updateMe con solo displayName no toca el email`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
+
+        mockMvc.perform(
+            patch("/api/v1/me")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"displayName": "Ada Lovelace"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
+            .andExpect(jsonPath("$.email").value(nullValue()))
+
+        assertEquals("Ada Lovelace", usersRepository.findByKeycloakId(subject)?.displayName)
+        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
+    }
+
+    @Test
+    fun `updateMe con solo email no toca el displayName`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
+        mockMvc.perform(
+            patch("/api/v1/me")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"displayName": "Ada Lovelace"}""")
+        )
+
+        mockMvc.perform(
+            patch("/api/v1/me")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"email": "ada@example.com"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value("ada@example.com"))
+            .andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
+    }
+
+    @Test
+    fun `updateMe con email invalido responde 400`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
+
+        mockMvc.perform(
+            patch("/api/v1/me")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"email": "not-an-email"}""")
+        ).andExpect(status().isBadRequest)
+
+        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
     }
 }
