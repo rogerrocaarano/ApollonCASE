@@ -19,5 +19,5 @@
 
 ## 4. End-to-end verification
 
-- [ ] 4.1 Manually exercise the flow against a running stack: log in as a user with no profile set, confirm the Help menu shows "Signed in as `<keycloakId>`", open "Edit profile", set a display name and email, save, confirm the menu now shows the display name, reload the page, confirm it persists.
+- [x] 4.1 Manually exercise the flow against a running stack: log in as a user with no profile set, confirm the Help menu shows "Signed in as `<keycloakId>`", open "Edit profile", set a display name and email, save, confirm the menu now shows the display name, reload the page, confirm it persists.
 - [x] 4.2 Run the full test suites and confirm they pass: `npm run test --workspace=@tumaet/webapp` (364/364) and `./gradlew test` in `services/extension-backend` (30/31 — the 1 failure, `ExtensionBackendApplicationTests.contextLoads`, is the same pre-existing, unrelated failure noted in `add-projects`).
