@@ -7,9 +7,9 @@ import {
 import { FileMenu } from "./FileMenu"
 
 /**
- * The editor's File dropdown: New Diagram, Import (JSON), and a flat, labelled
- * Export group (SVG / PNG / JSON / PDF / PPTX) — one level of nesting, no submenu,
- * so the same body inlines cleanly into the mobile overflow. The trigger color
+ * The editor's File dropdown: Import (JSON) and a flat, labelled Export group
+ * (SVG / PNG / JSON / PDF / PPTX) — one level of nesting, no submenu, so the
+ * same body inlines cleanly into the mobile overflow. The trigger color
  * follows the navbar convention — `secondary` on the always-dark desktop bar, or
  * an explicit `color` for the themed mobile sheet.
  */
@@ -50,13 +50,13 @@ export const MenuOpens: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /file/i }))
 
     const body = within(document.body)
-    await expect(
-      await body.findByRole("menuitem", { name: /new diagram/i })
-    ).toBeInTheDocument()
     // Export is a flat, labelled group — no submenu trigger. Its formats are
     // direct menuitems and the "Export" heading is a group label, not a menuitem.
     await expect(
-      body.getByRole("menuitem", { name: /as svg/i })
+      await body.findByRole("menuitem", { name: /as svg/i })
     ).toBeInTheDocument()
+    await expect(
+      body.queryByRole("menuitem", { name: /new diagram/i })
+    ).not.toBeInTheDocument()
   },
 }

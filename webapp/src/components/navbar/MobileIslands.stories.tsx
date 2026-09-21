@@ -10,12 +10,13 @@ import { MobileActionsPill, MobileBackPill } from "./MobileIslands"
  * The compact phone-portrait chrome pills. `MobileBackPill` is the left
  * cluster — an always-visible chevron-only back affordance, the single
  * `<header role="banner">`. `MobileActionsPill` is the right cluster — a compact
- * icon row (Share · Version · File▾ · Help▾ · Theme) that keeps File and Help as
- * TWO SEPARATE menus rather than one merged overflow.
+ * icon row (File▾ · Version · Theme). No Share and no Help here — sharing lives
+ * on the project detail page and Help is home-only chrome.
  *
- * Both read `ModalContext` (Share opens a modal) so `WebappProviders` wraps
- * them; they paint on the editor's dark canvas, so the decorator supplies that
- * backdrop. The File/Help menus portal to the document body.
+ * `WebappProviders` wraps them since the File menu still reads `ModalContext`
+ * (the "As PPTX" export opens a modal); they paint on the editor's dark canvas,
+ * so the decorator supplies that backdrop. The File menu portals to the
+ * document body.
  */
 
 const meta = {
@@ -52,16 +53,16 @@ export const BackPill: Story = {
   render: () => <MobileBackPill />,
 }
 
-/** The right actions cluster in isolation (Share · Version · File▾ · Help▾ · Theme). */
+/** The right actions cluster in isolation (File▾ · Version · Theme). */
 export const ActionsPill: Story = {
   render: () => <MobileActionsPill />,
 }
 
 /**
- * The File menu is its OWN dropdown (not merged with Help). It holds the file
- * leaves + the flat Export group, plus "Save a local copy" — which only renders
- * with BOTH a /shared/:id route and a live editor in context, so this story
- * drives the router there and injects a minimal editor stub.
+ * The File menu holds the file leaves + the flat Export group, plus "Save a
+ * local copy" — which only renders with BOTH a /shared/:id route and a live
+ * editor in context, so this story drives the router there and injects a
+ * minimal editor stub.
  */
 export const FileMenu: Story = {
   tags: ["test", "!autodocs", "!dev"],
@@ -99,27 +100,10 @@ export const FileMenu: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /^file$/i }))
     const menu = within(canvasElement.ownerDocument.body)
     await expect(
-      await menu.findByRole("menuitem", { name: /new diagram/i })
+      await menu.findByRole("menuitem", { name: /save a local copy/i })
     ).toBeInTheDocument()
     await expect(
-      menu.getByRole("menuitem", { name: /save a local copy/i })
-    ).toBeInTheDocument()
-  },
-}
-
-/** The Help menu is a SEPARATE dropdown — the shared Help/legal body (editor variant). */
-export const HelpMenu: Story = {
-  tags: ["test", "!autodocs", "!dev"],
-  render: () => <MobileActionsPill />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: /^help$/i }))
-    const menu = within(canvasElement.ownerDocument.body)
-    await expect(
-      await menu.findByRole("menuitem", { name: /how does this editor work/i })
-    ).toBeInTheDocument()
-    await expect(
-      menu.getByRole("menuitem", { name: /imprint/i })
-    ).toBeInTheDocument()
+      menu.queryByRole("menuitem", { name: /new diagram/i })
+    ).not.toBeInTheDocument()
   },
 }

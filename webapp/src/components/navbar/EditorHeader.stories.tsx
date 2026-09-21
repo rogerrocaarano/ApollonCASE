@@ -12,8 +12,8 @@ import { EditorHeaderRow } from "./EditorHeader"
  *
  * It reads `EditorContext` (the title island subscribes to the diagram name —
  * with no live editor it shows the "Untitled diagram" placeholder) and
- * `ModalContext` (Share/File open a modal), so `WebappProviders` wraps it. Links
- * use the global router from preview.tsx.
+ * `ModalContext` (File opens a modal for JSON import / PPTX export), so
+ * `WebappProviders` wraps it. Links use the global router from preview.tsx.
  */
 
 const meta = {

@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test"
-import { openFixtureInLocalEditor, waitForCanvasReady } from "../helpers/canvas"
+import {
+  openFixtureInLocalEditor,
+  openNewDiagramDialog,
+  waitForCanvasReady,
+} from "../helpers/canvas"
 
 /**
  * E2E behavioural tests for the Apollon UML diagram editor.
@@ -260,21 +264,19 @@ test.describe("Palette drag alignment", () => {
 
 test.describe("Template diagram interactions", () => {
   test.beforeEach(async ({ page }) => {
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
-
-    // Load the Adapter template via File → New Diagram → Use template → Create
-    await fileMenuButton(page).click()
-    await page.getByText("New Diagram").click()
-    await page.getByRole("tab", { name: "Use template" }).click()
-    await page.getByRole("button", { name: "Create Diagram" }).click()
-    await waitForCanvasReady(page)
-
-    // Template has nodes – wait for them
+    // Load the Adapter template via Home's New Diagram dialog → Use template →
+    // Create. "New Diagram" no longer lives in the editor's File menu, so
+    // template creation always starts from the dashboard.
+    await page.goto("/")
     await page
-      .locator(".react-flow__node")
-      .first()
-      .waitFor({ state: "visible", timeout: 10_000 })
+      .getByRole("heading", { level: 1, name: "Your diagrams" })
+      .waitFor({ timeout: 15_000 })
+
+    const dialog = await openNewDiagramDialog(page)
+    await dialog.getByRole("tab", { name: "Use template" }).click()
+    await dialog.getByRole("button", { name: "Create Diagram" }).click()
+    await page.waitForURL(/\/local\/[^/]+$/, { timeout: 15_000 })
+    await waitForCanvasReady(page)
   })
 
   test("at least one node is visible on the template diagram", async ({
@@ -306,17 +308,19 @@ test.describe("Template diagram interactions", () => {
   test("creating from a template uses the shared name field as the diagram title", async ({
     page,
   }) => {
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
+    await page.goto("/")
+    await page
+      .getByRole("heading", { level: 1, name: "Your diagrams" })
+      .waitFor({ timeout: 15_000 })
 
-    await fileMenuButton(page).click()
-    await page.getByText("New Diagram").click()
-    await page.getByRole("tab", { name: "Use template" }).click()
+    const dialog = await openNewDiagramDialog(page)
+    await dialog.getByRole("tab", { name: "Use template" }).click()
 
     const nameInput = page.getByLabel("Name")
     await expect(nameInput).toHaveValue("Adapter")
     await nameInput.fill("Custom Template Diagram")
-    await page.getByRole("button", { name: "Create Diagram" }).click()
+    await dialog.getByRole("button", { name: "Create Diagram" }).click()
+    await page.waitForURL(/\/local\/[^/]+$/, { timeout: 15_000 })
     await waitForCanvasReady(page)
 
     const currentTitle = await page.evaluate(() => {
@@ -336,12 +340,13 @@ test.describe("Template diagram interactions", () => {
   })
 
   test("template tab renders real diagram previews", async ({ page }) => {
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
+    await page.goto("/")
+    await page
+      .getByRole("heading", { level: 1, name: "Your diagrams" })
+      .waitFor({ timeout: 15_000 })
 
-    await fileMenuButton(page).click()
-    await page.getByText("New Diagram").click()
-    await page.getByRole("tab", { name: "Use template" }).click()
+    const dialog = await openNewDiagramDialog(page)
+    await dialog.getByRole("tab", { name: "Use template" }).click()
 
     // Previews render lazily off an idle queue (a hidden editor per template),
     // so allow generous time for the first light-mode thumbnail to appear. Assert
@@ -356,15 +361,18 @@ test.describe("Template diagram interactions", () => {
     page,
   }) => {
     const createFromTemplate = async () => {
-      await fileMenuButton(page).click()
-      await page.getByText("New Diagram").click()
-      await page.getByRole("tab", { name: "Use template" }).click()
-      await page.getByRole("button", { name: "Create Diagram" }).click()
+      await page.goto("/")
+      await page
+        .getByRole("heading", { level: 1, name: "Your diagrams" })
+        .waitFor({ timeout: 15_000 })
+
+      const dialog = await openNewDiagramDialog(page)
+      await dialog.getByRole("tab", { name: "Use template" }).click()
+      await dialog.getByRole("button", { name: "Create Diagram" }).click()
+      await page.waitForURL(/\/local\/[^/]+$/, { timeout: 15_000 })
       await waitForCanvasReady(page)
     }
 
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
     await createFromTemplate()
     await createFromTemplate()
 
@@ -478,10 +486,11 @@ test.describe("Navbar", () => {
     await fileMenuButton(page).click()
 
     // Verify key menu items are visible
-    await expect(page.getByText("New Diagram")).toBeVisible()
     await expect(page.getByText("Export")).toBeVisible()
-    // "Start from Template" (now a tab in New Diagram) and "Load Diagram" (the
-    // dashboard is the loader) were removed.
+    // "New Diagram" (creation happens from Home/the project view, not from an
+    // already-open editor), "Start from Template" (now a tab in New Diagram),
+    // and "Load Diagram" (the dashboard is the loader) were removed.
+    await expect(page.getByText("New Diagram")).toHaveCount(0)
     await expect(page.getByText("Start from Template")).toHaveCount(0)
     await expect(page.getByText("Load Diagram")).toHaveCount(0)
   })
@@ -496,49 +505,6 @@ test.describe("Navbar", () => {
     ).toBeVisible()
   })
 
-  test("opening a legal page from the editor offers a way back to the diagram", async ({
-    page,
-  }) => {
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
-
-    await page.getByRole("button", { name: "Help" }).click()
-    await page.getByRole("menuitem", { name: "Privacy" }).click()
-    await expect(page).toHaveURL(/\/privacy$/)
-
-    // Provenance turns the chrome back link into a return to the exact diagram,
-    // not the generic dashboard — the editor->Help->legal dead end is gone.
-    const backToDiagram = page.getByRole("link", { name: "Back to diagram" })
-    await expect(backToDiagram).toBeVisible()
-    await backToDiagram.click()
-    await expect(page).toHaveURL(/\/local\/e2e-local-model-id$/)
-    await waitForCanvasReady(page, false)
-  })
-
-  test("provenance survives a legal cross-link hop back to the diagram", async ({
-    page,
-  }) => {
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
-
-    await page.getByRole("button", { name: "Help" }).click()
-    await page.getByRole("menuitem", { name: "Privacy" }).click()
-    await expect(page).toHaveURL(/\/privacy$/)
-
-    // Hop across legal pages via the sub-page Help menu (the footer is retired);
-    // the origin must be forwarded, not replaced with the current
-    // /imprint|/privacy path.
-    await page.getByRole("button", { name: "Help" }).click()
-    await page.getByRole("menuitem", { name: "Imprint" }).click()
-    await expect(page).toHaveURL(/\/imprint$/)
-    await page.getByRole("button", { name: "Help" }).click()
-    await page.getByRole("menuitem", { name: "Privacy" }).click()
-    await expect(page).toHaveURL(/\/privacy$/)
-
-    await page.getByRole("link", { name: "Back to diagram" }).click()
-    await expect(page).toHaveURL(/\/local\/e2e-local-model-id$/)
-    await waitForCanvasReady(page, false)
-  })
 })
 
 // iPhone-class viewports. Headless Chromium reports 0 for env(safe-area-inset-*),
@@ -576,41 +542,6 @@ test.describe("Mobile responsive layout", () => {
     expect(fileMenuBox!.x + fileMenuBox!.width).toBeLessThanOrEqual(
       PHONE_PORTRAIT.width
     )
-  })
-
-  test("opens a responsive New Diagram modal from the editor", async ({
-    page,
-  }) => {
-    await page.setViewportSize(PHONE_PORTRAIT)
-    await openTemporaryLocalDiagram(page)
-    await waitForCanvasReady(page, false)
-
-    await page.getByRole("button", { name: "File" }).click()
-
-    await page
-      .getByRole("menu", { name: "File" })
-      .getByRole("menuitem", { name: "New Diagram" })
-      .click()
-
-    const dialog = page.getByRole("dialog", { name: "New Diagram" })
-    await expect(dialog).toBeVisible()
-    await expect(
-      dialog.getByRole("tab", { name: "Blank diagram" })
-    ).toBeVisible()
-    await expect(
-      dialog.getByRole("tab", { name: "Use template" })
-    ).toBeVisible()
-
-    const dialogBox = await dialog.boundingBox()
-    expect(dialogBox).not.toBeNull()
-    expect(dialogBox!.x).toBeGreaterThanOrEqual(12)
-    expect(dialogBox!.width).toBeLessThanOrEqual(PHONE_PORTRAIT.width - 24)
-    expect(dialogBox!.height).toBeLessThanOrEqual(PHONE_PORTRAIT.height - 24)
-
-    const hasHorizontalOverflow = await dialog.evaluate(
-      (element) => element.scrollWidth > element.clientWidth
-    )
-    expect(hasHorizontalOverflow).toBe(false)
   })
 
   test("uses the compact navbar and floating palette in portrait", async ({
@@ -655,21 +586,6 @@ test.describe("Mobile responsive layout", () => {
     await expect(
       page.getByRole("button", { name: /Switch to (light|dark) mode/ })
     ).toBeVisible()
-
-    // Share is a primary icon on the pill too.
-    await page.getByRole("button", { name: "Share" }).click()
-
-    const shareDialog = page.getByRole("dialog", { name: "Share" })
-    await expect(shareDialog).toBeVisible()
-    const shareDialogBox = await shareDialog.boundingBox()
-    expect(shareDialogBox?.x).toBeGreaterThanOrEqual(12)
-    expect(shareDialogBox?.width).toBeLessThanOrEqual(PHONE_PORTRAIT.width - 24)
-
-    const shareContent = page.getByTestId("share-modal-content")
-    const hasHorizontalOverflow = await shareContent.evaluate(
-      (element) => element.scrollWidth > element.clientWidth
-    )
-    expect(hasHorizontalOverflow).toBe(false)
   })
 
   test("keeps the full action set in landscape and clears the side safe-area insets", async ({

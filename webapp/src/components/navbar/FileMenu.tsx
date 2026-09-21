@@ -72,12 +72,13 @@ const saveCombo = EDITOR_SHORTCUTS.find(
 )!.combo
 
 /**
- * The shared File-menu LEAVES — New Diagram, Import, and the Export formats —
- * rendered as FLAT `DropdownMenuItem`s (mirroring `HelpMenuItems`). Export is a
- * single labelled `DropdownMenuGroup`, NOT a nested submenu: the chrome caps menu
+ * The shared File-menu LEAVES — Import and the Export formats — rendered as
+ * FLAT `DropdownMenuItem`s (mirroring `HelpMenuItems`). Export is a single
+ * labelled `DropdownMenuGroup`, NOT a nested submenu: the chrome caps menu
  * nesting at ONE level, so the same body drops cleanly into the desktop File
  * dropdown AND inlines into the editor mobile overflow without ever becoming a
- * menu-inside-a-menu.
+ * menu-inside-a-menu. No "New Diagram" here — creating a diagram is reachable
+ * from Home and the project view, not from inside an already-open editor.
  *
  * Owns the export hooks + the global re-entry lock so the desktop and mobile
  * surfaces share one source of behaviour. `onSelect` closes the surrounding menu
@@ -93,11 +94,6 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
   // clicks (they share the editor's SVG extraction). The per-item `disabled`
   // below is just the visual cue on the format in flight.
   const [busyFormat, setBusyFormat] = useState<ExportFormat | null>(null)
-
-  const handleNewDiagram = useCallback(() => {
-    openModal("NEW_DIAGRAM", { dialogVariant: "home" })
-    onSelect()
-  }, [openModal, onSelect])
 
   // Every export takes the same path: one toast that shows "Exporting…" while
   // it runs, then resolves in place to success or error. Uniform across all
@@ -136,9 +132,6 @@ export function FileMenuItems({ onSelect }: { onSelect: () => void }) {
 
   return (
     <>
-      <DropdownMenuItem onClick={handleNewDiagram}>
-        New Diagram
-      </DropdownMenuItem>
       {/* Templates are a tab in the New Diagram dialog, and the dashboard is
           the diagram loader — so no "Start from Template"/"Load Diagram" here.
           Version history has its own VersionHistoryButton. */}

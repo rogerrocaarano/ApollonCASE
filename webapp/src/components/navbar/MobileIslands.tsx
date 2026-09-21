@@ -5,18 +5,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@tumaet/ui/components/dropdown-menu"
-import { IconButton } from "@tumaet/ui/components/icon-button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@tumaet/ui/components/tooltip"
-import { CircleHelpIcon, FilesIcon, ShareIcon } from "lucide-react"
-import { useModalContext } from "@/contexts"
+import { FilesIcon } from "lucide-react"
 import { useEditorBackTarget } from "@/hooks/useEditorBackTarget"
 import { BackNav } from "./BackNav"
 import { FileMenuItems } from "./FileMenu"
-import { HelpMenuItems } from "@/components/home/HomeHelpMenu"
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton"
 import { ThemeSwitcherMenu } from "./ThemeSwitcher"
 import { UserMenu } from "./UserMenu"
@@ -28,12 +25,11 @@ import {
 
 /**
  * An ICON-ONLY menu trigger for the mobile editor pill: a `.apollon-chrome-iconbtn`
- * glyph (one family with the Share / Version / Theme icons) that opens its OWN
+ * glyph (one family with the Version / Theme icons) that opens its OWN
  * small dropdown. Carries an `aria-label` plus the shared {@link Tooltip} as its
  * visible name, composed onto the trigger via Base UI's `render=` so one button is
- * both tooltip-anchor and menu-trigger. Keeps File and Help as two separate,
- * scannable menus on the phone (no merged mega-overflow), each with its own
- * trigger + inlined body. `children` receive a `close` callback to dismiss it.
+ * both tooltip-anchor and menu-trigger. `children` receive a `close` callback to
+ * dismiss it.
  */
 export function MobileMenuButton({
   label,
@@ -111,24 +107,22 @@ export function MobileBackPill() {
 /**
  * Right cluster on narrow phones — a compact row of icon-only triggers:
  *
- *   File▾ · Share · Version · Help▾ · Theme
+ *   File▾ · Version · Theme
  *
  * The left-to-right order matches the desktop actions island exactly, so no
  * control jumps position between bar and pill — Save just folds into File▾ here
- * (it has no standalone slot). File and Help stay as two separate dropdowns (not
- * one mega-overflow) so each is a small, scannable menu. Each icon-only control
+ * (it has no standalone slot). No Share and no Help here — sharing lives on the
+ * project detail page and Help is home-only chrome. Each icon-only control
  * carries a tooltip as its accessible name.
  */
 export function MobileActionsPill() {
-  const { openModal } = useModalContext()
-
   return (
     <div
       aria-label="Editor actions"
       className="apollon-glass apollon-chrome-island"
       style={PILL_STYLE}
     >
-      {/* File — New / Import + the flat Export group, then Save-a-local-copy
+      {/* File — Import + the flat Export group, then Save-a-local-copy
           (parked here off the desktop bar to keep the pill compact). */}
       <MobileMenuButton
         id="mobile-file"
@@ -149,32 +143,9 @@ export function MobileActionsPill() {
         )}
       </MobileMenuButton>
 
-      {/* Share + Version stay visible as icons in the .apollon-chrome-iconbtn
-          family; each is icon-only, so its tooltip supplies the visible name. */}
-      <IconButton
-        ariaLabel="Share"
-        tooltip="Share"
-        className="apollon-chrome-iconbtn"
-        onClick={() => openModal("SHARE", { dialogVariant: "home" })}
-      >
-        <ShareIcon className="size-4" aria-hidden />
-      </IconButton>
+      {/* Version stays visible as an icon in the .apollon-chrome-iconbtn family;
+          it's icon-only, so its tooltip supplies the visible name. */}
       <VersionHistoryButton variant="icon" />
-
-      {/* Help — its OWN dropdown (separate from File). The shared Help/legal body
-          in the editor variant. */}
-      <MobileMenuButton
-        id="mobile-help"
-        label="Help"
-        icon={
-          <CircleHelpIcon
-            className="size-[var(--apollon-chrome-icon)]"
-            aria-hidden
-          />
-        }
-      >
-        {(close) => <HelpMenuItems variant="editor" onSelect={close} />}
-      </MobileMenuButton>
 
       {/* Account — its own dropdown (name + Sign out), no items to inline. */}
       <UserMenu reveal="lg" />
