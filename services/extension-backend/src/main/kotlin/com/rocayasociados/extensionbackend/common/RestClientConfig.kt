@@ -1,5 +1,6 @@
 package com.rocayasociados.extensionbackend.common
 
+import java.time.Clock
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.client.RestClient
@@ -15,4 +16,8 @@ import org.springframework.web.client.RestClient
 class RestClientConfig {
     @Bean
     fun restClientBuilder(): RestClient.Builder = RestClient.builder()
+
+    /** Injectable so time-based components (e.g. `WsTicketService`) can be tested with a fixed clock. */
+    @Bean
+    fun clock(): Clock = Clock.systemUTC()
 }

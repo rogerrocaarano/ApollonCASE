@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delet
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -42,11 +43,23 @@ class ProjectsControllerTest {
     @Autowired
     lateinit var diagramsRepository: DiagramsRepository
 
+    @Autowired
+    lateinit var diagramsBackendClient: DiagramsBackendClient
+
     private fun newSubject() = "test-subject-${UUID.randomUUID()}"
 
     private fun createProjectAs(subject: String, name: String, description: String = "desc"): Project {
         val owner = usersService.trackKeycloakUser(subject)
         return projectsRepository.save(Project(name = name, description = description, owner = owner))
+    }
+
+    /** Creates a real diagram body in the running diagrams-backend and links it to the project. */
+    private fun createRealDiagramIn(project: Project, title: String = "Test diagram"): Diagram {
+        val created = diagramsBackendClient.createDiagram(
+            mapOf("title" to title, "type" to "ClassDiagram", "version" to "4.0.0")
+        )
+        val redisId = created["id"] as String
+        return diagramsRepository.save(Diagram(project = project, redisId = redisId))
     }
 
     @Test
@@ -176,14 +189,28 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `listProjectDiagrams devuelve los diagramas enlazados`() {
+    fun `listProjectDiagrams devuelve los diagramas enlazados con metadata resuelta`() {
         val subject = newSubject()
         val project = createProjectAs(subject, "With diagrams")
-        diagramsRepository.save(Diagram(project = project, redisId = "redis-${UUID.randomUUID()}"))
+        createRealDiagramIn(project, title = "Resolved title")
 
         mockMvc.perform(get("/api/v1/projects/${project.id}/diagrams").with(jwt().jwt { it.subject(subject) }))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].status").value("ready"))
+            .andExpect(jsonPath("$[0].title").value("Resolved title"))
+            .andExpect(jsonPath("$[0].redisId").doesNotExist())
+    }
+
+    @Test
+    fun `listProjectDiagrams marca como failed un diagrama que ya no existe en diagrams-backend`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a stale diagram")
+        diagramsRepository.save(Diagram(project = project, redisId = "redis-${UUID.randomUUID()}"))
+
+        mockMvc.perform(get("/api/v1/projects/${project.id}/diagrams").with(jwt().jwt { it.subject(subject) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].status").value("failed"))
     }
 
     @Test
@@ -197,7 +224,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `linkDiagram de otro usuario responde 403`() {
+    fun `createDiagram de otro usuario responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -206,22 +233,31 @@ class ProjectsControllerTest {
             post("/api/v1/projects/${project.id}/diagrams")
                 .with(jwt().jwt { it.subject(stranger) })
                 .contentType("application/json")
-                .content("""{"redisId": "redis-id"}""")
+                .content("""{"model": {"title": "Hijacked", "type": "ClassDiagram", "version": "4.0.0"}}""")
         ).andExpect(status().isForbidden)
     }
 
     @Test
-    fun `linkDiagram actualiza updatedAt del proyecto`() {
+    fun `createDiagram crea el cuerpo en diagrams-backend, lo enlaza y actualiza updatedAt del proyecto`() {
         val subject = newSubject()
         val project = createProjectAs(subject, "Gets a diagram")
         val originalUpdatedAt = project.updatedAt
 
-        mockMvc.perform(
+        val result = mockMvc.perform(
             post("/api/v1/projects/${project.id}/diagrams")
                 .with(jwt().jwt { it.subject(subject) })
                 .contentType("application/json")
-                .content("""{"redisId": "redis-${UUID.randomUUID()}"}""")
-        ).andExpect(status().isCreated)
+                .content(
+                    """{"model": {"title": "Brand new", "type": "ClassDiagram", "version": "4.0.0"}}"""
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.redisId").doesNotExist())
+            .andReturn()
+
+        val diagramId = com.jayway.jsonpath.JsonPath.read<String>(result.response.contentAsString, "$.id")
+        val saved = diagramsRepository.findById(UUID.fromString(diagramId)).orElseThrow()
+        assertTrue(saved.redisId.isNotBlank())
 
         val reloaded = projectsRepository.findById(requireNotNull(project.id)).orElseThrow()
         assertTrue(reloaded.updatedAt.isAfter(originalUpdatedAt))
@@ -314,5 +350,196 @@ class ProjectsControllerTest {
         ).andExpect(status().isForbidden)
 
         assertTrue(projectsRepository.findById(requireNotNull(project.id)).isPresent)
+    }
+
+    @Test
+    fun `getDiagramBody del owner devuelve el cuerpo de diagrams-backend`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a diagram")
+        val diagram = createRealDiagramIn(project, title = "My diagram")
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(subject) })
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("My diagram"))
+    }
+
+    @Test
+    fun `getDiagramBody de otro usuario responde 403`() {
+        val owner = newSubject()
+        val stranger = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(stranger) })
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `putDiagramBody del owner actualiza el cuerpo`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            put("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"title": "Updated title", "type": "ClassDiagram", "version": "4.0.0"}""")
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(subject) })
+        ).andExpect(jsonPath("$.title").value("Updated title"))
+    }
+
+    @Test
+    fun `putDiagramBody con If-Match desactualizado reenvia el 409 REVISION_MISMATCH de diagrams-backend`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            put("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .header("If-Match", "999")
+                .content("""{"title": "Stale", "type": "ClassDiagram", "version": "4.0.0"}""")
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error").value("REVISION_MISMATCH"))
+    }
+
+    @Test
+    fun `putDiagramBody de otro usuario responde 403`() {
+        val owner = newSubject()
+        val stranger = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            put("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(stranger) })
+                .contentType("application/json")
+                .content("""{"title": "Hijacked", "type": "ClassDiagram", "version": "4.0.0"}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `flujo completo de versiones para el owner`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+
+        val createResult = mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content(
+                    """{"name": "v1", "body": {"id": "${diagram.redisId}", "title": "Test diagram", "type": "ClassDiagram", "version": "4.0.0"}}"""
+                )
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.name").value("v1"))
+            .andReturn()
+
+        val versionId = com.jayway.jsonpath.JsonPath.read<String>(
+            createResult.response.contentAsString, "$.id"
+        )
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                .with(jwt().jwt { it.subject(subject) })
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.versions.length()").value(1))
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions/$versionId")
+                .with(jwt().jwt { it.subject(subject) })
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.title").value("Test diagram"))
+
+        mockMvc.perform(
+            patch("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions/$versionId")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("""{"name": "renamed"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("renamed"))
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions/$versionId/restore")
+                .with(jwt().jwt { it.subject(subject) })
+                .contentType("application/json")
+                .content("{}")
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            delete("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions/$versionId")
+                .with(jwt().jwt { it.subject(subject) })
+        ).andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `listDiagramVersions de otro usuario responde 403`() {
+        val owner = newSubject()
+        val stranger = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                .with(jwt().jwt { it.subject(stranger) })
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `issueWsTicket del owner devuelve un ticket`() {
+        val subject = newSubject()
+        val project = createProjectAs(subject, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/ws-ticket")
+                .with(jwt().jwt { it.subject(subject) })
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.ticket").isNotEmpty)
+    }
+
+    @Test
+    fun `issueWsTicket de otro usuario responde 403`() {
+        val owner = newSubject()
+        val stranger = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/ws-ticket")
+                .with(jwt().jwt { it.subject(stranger) })
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `createDiagramVersion de otro usuario responde 403`() {
+        val owner = newSubject()
+        val stranger = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                .with(jwt().jwt { it.subject(stranger) })
+                .contentType("application/json")
+                .content("""{"body": {"id": "${diagram.redisId}", "title": "x", "type": "ClassDiagram", "version": "4.0.0"}}""")
+        ).andExpect(status().isForbidden)
     }
 }

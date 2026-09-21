@@ -28,6 +28,10 @@ class SecurityConfig(
             authorizeHttpRequests {
                 authorize("/v3/api-docs/**") { _, _ -> AuthorizationDecision(true) }
                 authorize("/swagger-ui/**") { _, _ -> AuthorizationDecision(true) }
+                // A browser cannot set an Authorization header on a WS handshake; this
+                // endpoint authenticates via a short-lived, single-use ticket instead
+                // (see WsTicketService / DiagramRelayHandler), not the JWT filter.
+                authorize("/ws/diagrams") { _, _ -> AuthorizationDecision(true) }
                 authorize(anyRequest, authenticated())
             }
             oauth2ResourceServer {
@@ -43,7 +47,7 @@ class SecurityConfig(
         val configuration = CorsConfiguration().apply {
             allowedOrigins = this@SecurityConfig.allowedOrigins.split(",").map { it.trim() }
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            allowedHeaders = listOf("Authorization", "Content-Type")
+            allowedHeaders = listOf("Authorization", "Content-Type", "If-Match")
         }
         return UrlBasedCorsConfigurationSource().apply {
             registerCorsConfiguration("/**", configuration)
