@@ -48,7 +48,7 @@ const project = {
   id: "p1",
   name: "My Project",
   description: "A test project",
-  ownerId: "u1",
+  myPermission: "OWNER" as const,
   createdAt: "now",
   updatedAt: "now",
 }
@@ -122,6 +122,65 @@ describe("ProjectDetailPage", () => {
         projectId: "p1",
       })
     })
+  })
+
+  it("opens the share-project modal scoped to this project", async () => {
+    listDiagramsMock.mockResolvedValue([])
+
+    renderPage()
+
+    const button = await screen.findByRole("button", { name: "Share" })
+    button.click()
+
+    await waitFor(() => {
+      expect(openModalMock).toHaveBeenCalledWith("SHARE_PROJECT", {
+        dialogVariant: "home",
+        projectId: "p1",
+      })
+    })
+  })
+
+  it("OWNER sees Rename, Share, Delete project, New diagram, and delete-diagram controls", async () => {
+    listDiagramsMock.mockResolvedValue([readyDiagram])
+
+    renderPage()
+
+    await screen.findByText("My Diagram")
+    expect(screen.getByRole("button", { name: "Rename" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: /new diagram/i })).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "Delete diagram" })
+    ).toBeTruthy()
+  })
+
+  it("COLLABORATOR sees only New diagram, not project or diagram management controls", async () => {
+    getMock.mockResolvedValue({ ...project, myPermission: "COLLABORATOR" })
+    listDiagramsMock.mockResolvedValue([readyDiagram])
+
+    renderPage()
+
+    await screen.findByText("My Diagram")
+    expect(screen.getByRole("button", { name: /new diagram/i })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Rename" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Delete diagram" })).toBeNull()
+  })
+
+  it("VIEWER sees no management controls at all", async () => {
+    getMock.mockResolvedValue({ ...project, myPermission: "VIEWER" })
+    listDiagramsMock.mockResolvedValue([readyDiagram])
+
+    renderPage()
+
+    await screen.findByText("My Diagram")
+    expect(screen.queryByRole("button", { name: "Rename" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull()
+    expect(screen.queryByRole("button", { name: /new diagram/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Delete diagram" })).toBeNull()
   })
 
   it("deletes the project after confirmation and navigates home", async () => {

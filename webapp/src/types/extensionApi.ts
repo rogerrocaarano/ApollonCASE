@@ -5,7 +5,7 @@ export interface Project {
   id: string
   name: string
   description: string
-  ownerId: string
+  myPermission: "OWNER" | "COLLABORATOR" | "VIEWER"
   createdAt: string
   updatedAt: string
 }

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { ExtensionApiClient, ProjectsApiClient } from "./ExtensionApiClient"
+import {
+  ExtensionApiClient,
+  ExtensionApiError,
+  ProjectsApiClient,
+} from "./ExtensionApiClient"
 
 vi.mock("@/auth/oidcConfig", () => ({
   getAccessToken: vi.fn().mockResolvedValue("test-token"),
@@ -76,7 +80,7 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
         id: "p1",
         name: "Mine",
         description: "desc",
-        ownerId: "u1",
+        myPermission: "OWNER",
         createdAt: "now",
         updatedAt: "now",
       })
@@ -95,7 +99,7 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
         id: "p1",
         name: "New",
         description: "desc",
-        ownerId: "u1",
+        myPermission: "OWNER",
         createdAt: "now",
         updatedAt: "now",
       })
@@ -116,7 +120,7 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
         id: "p1",
         name: "Renamed",
         description: "desc",
-        ownerId: "u1",
+        myPermission: "OWNER",
         createdAt: "now",
         updatedAt: "now",
       })
@@ -202,5 +206,37 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
     await expect(ProjectsApiClient.list()).rejects.toThrow(
       "extension-backend request failed with status 403"
     )
+  })
+
+  it("shareProject() sends a POST with the email and role", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ userId: "u2", role: "COLLABORATOR" })
+    )
+
+    const result = await ProjectsApiClient.shareProject("p1", {
+      email: "friend@example.com",
+      role: "COLLABORATOR",
+    })
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(pathOf(url)).toBe("/api/v1/projects/p1/share")
+    expect(init.method).toBe("POST")
+    expect(JSON.parse(init.body)).toEqual({
+      email: "friend@example.com",
+      role: "COLLABORATOR",
+    })
+    expect(result).toEqual({ userId: "u2", role: "COLLABORATOR" })
+  })
+
+  it("shareProject() rejects with a status-carrying error when the email is unknown", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }))
+
+    const promise = ProjectsApiClient.shareProject("p1", {
+      email: "unknown@example.com",
+      role: "VIEWER",
+    })
+
+    await expect(promise).rejects.toThrow(ExtensionApiError)
+    await expect(promise).rejects.toMatchObject({ status: 404 })
   })
 })

@@ -7,7 +7,7 @@ const SAMPLE_PROJECT: Project = {
   id: "p1",
   name: "Architecture diagrams",
   description: "C4 model of the extension-backend gateway.",
-  ownerId: "u1",
+  myPermission: "OWNER",
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-05T00:00:00.000Z",
 }

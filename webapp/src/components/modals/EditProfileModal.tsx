@@ -30,7 +30,6 @@ export const EditProfileModal = ({
 }: EditProfileModalProps) => {
   const { closeModal } = useModalContext()
   const [displayName, setDisplayName] = useState(user.displayName ?? "")
-  const [email, setEmail] = useState(user.email ?? "")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSave = async () => {
@@ -39,7 +38,6 @@ export const EditProfileModal = ({
     try {
       const updated = await ExtensionApiClient.updateMe({
         displayName: displayName.trim(),
-        email: email.trim(),
       })
       onUpdated?.(updated)
       closeModal()
@@ -63,15 +61,13 @@ export const EditProfileModal = ({
         />
       </HomeDialogField>
 
-      <HomeDialogField label="Email" htmlFor="profile-email">
-        <HomeDialogTextInput
-          id="profile-email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Enter an email address"
-        />
-      </HomeDialogField>
+      {user.email ? (
+        <HomeDialogField label="Email">
+          <p className="text-sm text-[var(--home-text-secondary)]">
+            {user.email}
+          </p>
+        </HomeDialogField>
+      ) : null}
 
       <HomeDialogActions
         cancelLabel="Cancel"

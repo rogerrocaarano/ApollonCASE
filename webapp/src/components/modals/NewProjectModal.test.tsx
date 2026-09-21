@@ -34,7 +34,7 @@ describe("NewProjectModal", () => {
       id: "p1",
       name: "New project",
       description: "desc",
-      ownerId: "u1",
+      myPermission: "OWNER" as const,
       createdAt: "now",
       updatedAt: "now",
     }

@@ -51,24 +51,24 @@ describe("EditProfileModal", () => {
     await waitFor(() => {
       expect(updateMeMock).toHaveBeenCalledWith({
         displayName: "New name",
-        email: "old@example.com",
       })
       expect(onUpdated).toHaveBeenCalledWith(updated)
       expect(closeModalMock).toHaveBeenCalled()
     })
   })
 
-  it("pre-fills the current display name and email", () => {
+  it("pre-fills the current display name and shows email read-only", () => {
     render(<EditProfileModal user={user} />)
     expect(
       (screen.getByLabelText("Display name") as HTMLInputElement).value
     ).toBe("Old name")
-    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe(
-      "old@example.com"
-    )
+    expect(
+      screen.queryByLabelText("Email") as HTMLInputElement | null
+    ).toBeNull()
+    expect(screen.getByText("old@example.com")).toBeTruthy()
   })
 
-  it("pre-fills blank fields when the user has no profile set yet", () => {
+  it("pre-fills a blank display name when the user has no profile set yet, and shows no email row", () => {
     render(
       <EditProfileModal
         user={{ id: "u1", keycloakId: "kc-1", displayName: null, email: null }}
@@ -77,7 +77,7 @@ describe("EditProfileModal", () => {
     expect(
       (screen.getByLabelText("Display name") as HTMLInputElement).value
     ).toBe("")
-    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("")
+    expect(screen.queryByText("Email")).toBeNull()
   })
 
   it("disables Save with a blank name when requireDisplayName is set", () => {

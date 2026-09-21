@@ -106,6 +106,10 @@ export const ProjectDetailPage = () => {
     })
   }
 
+  const handleShare = () => {
+    openModal("SHARE_PROJECT", { dialogVariant: "home", projectId: id })
+  }
+
   const handleDeleteProject = async () => {
     try {
       await ProjectsApiClient.deleteProject(id)
@@ -145,10 +149,13 @@ export const ProjectDetailPage = () => {
               ) : null}
             </header>
             <div className="flex shrink-0 items-center gap-2">
-              {project ? (
+              {project?.myPermission === "OWNER" ? (
                 <>
                   <Button type="button" variant="outline" onClick={handleRename}>
                     Rename
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleShare}>
+                    Share
                   </Button>
                   <Button
                     type="button"
@@ -159,10 +166,13 @@ export const ProjectDetailPage = () => {
                   </Button>
                 </>
               ) : null}
-              <Button type="button" onClick={handleNewDiagram}>
-                <Plus className="size-4" aria-hidden />
-                New diagram
-              </Button>
+              {project?.myPermission === "OWNER" ||
+              project?.myPermission === "COLLABORATOR" ? (
+                <Button type="button" onClick={handleNewDiagram}>
+                  <Plus className="size-4" aria-hidden />
+                  New diagram
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -209,7 +219,11 @@ export const ProjectDetailPage = () => {
               <ProjectDiagramCard
                 key={diagram.diagramId}
                 diagram={diagram}
-                onDelete={(d) => void handleDeleteDiagram(d)}
+                onDelete={
+                  project?.myPermission === "OWNER"
+                    ? (d) => void handleDeleteDiagram(d)
+                    : undefined
+                }
               />
             ))}
           </div>

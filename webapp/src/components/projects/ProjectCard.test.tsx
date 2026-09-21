@@ -7,7 +7,7 @@ const project = {
   id: "p1",
   name: "My Project",
   description: "desc",
-  ownerId: "u1",
+  myPermission: "OWNER" as const,
   createdAt: "now",
   updatedAt: "now",
 }

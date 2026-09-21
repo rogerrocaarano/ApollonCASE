@@ -2,6 +2,7 @@ export type ModalName =
   | "NEW_DIAGRAM"
   | "NEW_PROJECT"
   | "RENAME_PROJECT"
+  | "SHARE_PROJECT"
   | "EDIT_PROFILE"
   | "SHARE"
   | "SHARE_DASHBOARD"

@@ -32,8 +32,8 @@ export function ProjectGallery({
         <ProjectCard
           key={project.id}
           project={project}
-          onRename={onRename}
-          onDelete={onDelete}
+          onRename={project.myPermission === "OWNER" ? onRename : undefined}
+          onDelete={project.myPermission === "OWNER" ? onDelete : undefined}
         />
       ))}
     </div>
