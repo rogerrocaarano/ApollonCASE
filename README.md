@@ -96,6 +96,8 @@ Funciones que se buscan añadir sobre Apollon:
 5. **Creación de diagramas con lenguaje natural.** Describir un sistema por texto o **mensaje de voz** para crear y modificar diagramas (clases, atributos, relaciones), con revisión y confirmación del usuario antes de aplicar los cambios. Proveedor de IA y de transcripción: por definir.
 6. **Importación desde Enterprise Architect.** Importar modelos UML de Enterprise Architect como diagramas de Apollon, empezando por los tipos que soporta la librería (por ejemplo, diagramas de clase). Formato de intercambio y alcance: por definir.
 
+La lista formal de requisitos funcionales y no funcionales está en [docs/requisitos.md](docs/requisitos.md).
+
 ### Objetivos adicionales propuestos (por confirmar)
 
 - Auditoría e historial de cambios por usuario y por proyecto.
