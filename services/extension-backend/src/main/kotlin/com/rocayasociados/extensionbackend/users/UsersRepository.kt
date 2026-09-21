@@ -5,4 +5,5 @@ import java.util.UUID
 
 interface UsersRepository : JpaRepository<User, UUID> {
     fun findByKeycloakId(keycloakId: String): User?
+    fun findByEmail(email: String): User?
 }

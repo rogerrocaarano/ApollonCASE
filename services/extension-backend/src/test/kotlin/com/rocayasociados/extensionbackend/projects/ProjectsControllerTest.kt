@@ -41,6 +41,9 @@ class ProjectsControllerTest {
     lateinit var projectsRepository: ProjectsRepository
 
     @Autowired
+    lateinit var projectPermissionRepository: ProjectPermissionRepository
+
+    @Autowired
     lateinit var diagramsRepository: DiagramsRepository
 
     @Autowired
@@ -50,7 +53,16 @@ class ProjectsControllerTest {
 
     private fun createProjectAs(subject: String, name: String, description: String = "desc"): Project {
         val owner = usersService.trackKeycloakUser(subject)
-        return projectsRepository.save(Project(name = name, description = description, owner = owner))
+        val project = projectsRepository.save(Project(name = name, description = description))
+        projectPermissionRepository.save(
+            ProjectPermission(project = project, user = owner, permission = ProjectPermissionType.OWNER)
+        )
+        return project
+    }
+
+    private fun grant(project: Project, subject: String, permission: ProjectPermissionType) {
+        val user = usersService.trackKeycloakUser(subject)
+        projectPermissionRepository.save(ProjectPermission(project = project, user = user, permission = permission))
     }
 
     /** Creates a real diagram body in the running diagrams-backend and links it to the project. */
@@ -83,6 +95,28 @@ class ProjectsControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].name").value("Mine"))
+            .andExpect(jsonPath("$[0].myPermission").value("OWNER"))
+    }
+
+    @Test
+    fun `listProjects incluye proyectos donde el usuario es COLLABORATOR o VIEWER`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val viewer = newSubject()
+        val collabProject = createProjectAs(owner, "Shared as collaborator")
+        val viewerProject = createProjectAs(owner, "Shared as viewer")
+        grant(collabProject, collaborator, ProjectPermissionType.COLLABORATOR)
+        grant(viewerProject, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(get("/api/v1/projects").with(jwt().jwt { it.subject(collaborator) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].myPermission").value("COLLABORATOR"))
+
+        mockMvc.perform(get("/api/v1/projects").with(jwt().jwt { it.subject(viewer) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].myPermission").value("VIEWER"))
     }
 
     @Test
@@ -118,7 +152,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `createProject exitosa asigna owner y aparece en el listado`() {
+    fun `createProject exitosa asigna OWNER y aparece en el listado`() {
         val subject = newSubject()
 
         mockMvc.perform(
@@ -129,19 +163,32 @@ class ProjectsControllerTest {
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.name").value("New project"))
+            .andExpect(jsonPath("$.myPermission").value("OWNER"))
 
         mockMvc.perform(get("/api/v1/projects").with(jwt().jwt { it.subject(subject) }))
             .andExpect(jsonPath("$.length()").value(1))
     }
 
     @Test
-    fun `getProject de otro usuario responde 403`() {
+    fun `getProject sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
 
         mockMvc.perform(get("/api/v1/projects/${project.id}").with(jwt().jwt { it.subject(stranger) }))
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `getProject como VIEWER lo devuelve con myPermission VIEWER`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "Shared")
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(get("/api/v1/projects/${project.id}").with(jwt().jwt { it.subject(viewer) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.myPermission").value("VIEWER"))
     }
 
     @Test
@@ -165,7 +212,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `updateProject de otro usuario responde 403`() {
+    fun `updateProject de un usuario sin permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -173,6 +220,21 @@ class ProjectsControllerTest {
         mockMvc.perform(
             patch("/api/v1/projects/${project.id}")
                 .with(jwt().jwt { it.subject(stranger) })
+                .contentType("application/json")
+                .content("""{"name": "Hijacked"}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `updateProject como COLLABORATOR responde 403`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "Private")
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            patch("/api/v1/projects/${project.id}")
+                .with(jwt().jwt { it.subject(collaborator) })
                 .contentType("application/json")
                 .content("""{"name": "Hijacked"}""")
         ).andExpect(status().isForbidden)
@@ -203,6 +265,19 @@ class ProjectsControllerTest {
     }
 
     @Test
+    fun `listProjectDiagrams como VIEWER funciona`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "With diagrams")
+        createRealDiagramIn(project, title = "Visible to viewer")
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(get("/api/v1/projects/${project.id}/diagrams").with(jwt().jwt { it.subject(viewer) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+    }
+
+    @Test
     fun `listProjectDiagrams marca como failed un diagrama que ya no existe en diagrams-backend`() {
         val subject = newSubject()
         val project = createProjectAs(subject, "With a stale diagram")
@@ -214,7 +289,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `listProjectDiagrams de otro usuario responde 403`() {
+    fun `listProjectDiagrams sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -224,7 +299,37 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `createDiagram de otro usuario responde 403`() {
+    fun `createDiagram como COLLABORATOR funciona`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "Shared")
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams")
+                .with(jwt().jwt { it.subject(collaborator) })
+                .contentType("application/json")
+                .content("""{"model": {"title": "By collaborator", "type": "ClassDiagram", "version": "4.0.0"}}""")
+        ).andExpect(status().isCreated)
+    }
+
+    @Test
+    fun `createDiagram como VIEWER responde 403`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "Shared")
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams")
+                .with(jwt().jwt { it.subject(viewer) })
+                .contentType("application/json")
+                .content("""{"model": {"title": "By viewer", "type": "ClassDiagram", "version": "4.0.0"}}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `createDiagram sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -295,7 +400,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `deleteDiagram de otro usuario responde 403`() {
+    fun `deleteDiagram sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -306,6 +411,24 @@ class ProjectsControllerTest {
         mockMvc.perform(
             delete("/api/v1/projects/${project.id}/diagrams/${diagram.id}")
                 .with(jwt().jwt { it.subject(stranger) })
+        ).andExpect(status().isForbidden)
+
+        assertTrue(diagramsRepository.findById(requireNotNull(diagram.id)).isPresent)
+    }
+
+    @Test
+    fun `deleteDiagram como COLLABORATOR responde 403`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "Shared")
+        val diagram = diagramsRepository.save(
+            Diagram(project = project, redisId = "redis-${UUID.randomUUID()}")
+        )
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            delete("/api/v1/projects/${project.id}/diagrams/${diagram.id}")
+                .with(jwt().jwt { it.subject(collaborator) })
         ).andExpect(status().isForbidden)
 
         assertTrue(diagramsRepository.findById(requireNotNull(diagram.id)).isPresent)
@@ -340,13 +463,27 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `deleteProject de otro usuario responde 403`() {
+    fun `deleteProject sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
 
         mockMvc.perform(
             delete("/api/v1/projects/${project.id}").with(jwt().jwt { it.subject(stranger) })
+        ).andExpect(status().isForbidden)
+
+        assertTrue(projectsRepository.findById(requireNotNull(project.id)).isPresent)
+    }
+
+    @Test
+    fun `deleteProject como COLLABORATOR responde 403`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "Private")
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            delete("/api/v1/projects/${project.id}").with(jwt().jwt { it.subject(collaborator) })
         ).andExpect(status().isForbidden)
 
         assertTrue(projectsRepository.findById(requireNotNull(project.id)).isPresent)
@@ -367,7 +504,21 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `getDiagramBody de otro usuario responde 403`() {
+    fun `getDiagramBody como VIEWER funciona`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project, title = "Visible")
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            get("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(viewer) })
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `getDiagramBody sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -399,6 +550,38 @@ class ProjectsControllerTest {
     }
 
     @Test
+    fun `putDiagramBody como COLLABORATOR funciona`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            put("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(collaborator) })
+                .contentType("application/json")
+                .content("""{"title": "By collaborator", "type": "ClassDiagram", "version": "4.0.0"}""")
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `putDiagramBody como VIEWER responde 403`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            put("/api/v1/projects/${project.id}/diagrams/${diagram.id}/body")
+                .with(jwt().jwt { it.subject(viewer) })
+                .contentType("application/json")
+                .content("""{"title": "By viewer", "type": "ClassDiagram", "version": "4.0.0"}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `putDiagramBody con If-Match desactualizado reenvia el 409 REVISION_MISMATCH de diagrams-backend`() {
         val subject = newSubject()
         val project = createProjectAs(subject, "With a diagram")
@@ -416,7 +599,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `putDiagramBody de otro usuario responde 403`() {
+    fun `putDiagramBody sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -489,7 +672,33 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `listDiagramVersions de otro usuario responde 403`() {
+    fun `deleteDiagramVersion como COLLABORATOR responde 403`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        val versionId = com.jayway.jsonpath.JsonPath.read<String>(
+            mockMvc.perform(
+                post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                    .with(jwt().jwt { it.subject(owner) })
+                    .contentType("application/json")
+                    .content(
+                        """{"name": "v1", "body": {"id": "${diagram.redisId}", "title": "t", "type": "ClassDiagram", "version": "4.0.0"}}"""
+                    )
+            ).andReturn().response.contentAsString,
+            "$.id",
+        )
+
+        mockMvc.perform(
+            delete("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions/$versionId")
+                .with(jwt().jwt { it.subject(collaborator) })
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `listDiagramVersions sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -516,7 +725,35 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `issueWsTicket de otro usuario responde 403`() {
+    fun `issueWsTicket como COLLABORATOR funciona`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/ws-ticket")
+                .with(jwt().jwt { it.subject(collaborator) })
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `issueWsTicket como VIEWER responde 403`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "With a diagram")
+        val diagram = createRealDiagramIn(project)
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/ws-ticket")
+                .with(jwt().jwt { it.subject(viewer) })
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `issueWsTicket sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -529,7 +766,7 @@ class ProjectsControllerTest {
     }
 
     @Test
-    fun `createDiagramVersion de otro usuario responde 403`() {
+    fun `createDiagramVersion sin ningun permiso responde 403`() {
         val owner = newSubject()
         val stranger = newSubject()
         val project = createProjectAs(owner, "Private")
@@ -541,5 +778,111 @@ class ProjectsControllerTest {
                 .contentType("application/json")
                 .content("""{"body": {"id": "${diagram.redisId}", "title": "x", "type": "ClassDiagram", "version": "4.0.0"}}""")
         ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `createDiagramVersion como VIEWER responde 403`() {
+        val owner = newSubject()
+        val viewer = newSubject()
+        val project = createProjectAs(owner, "Private")
+        val diagram = createRealDiagramIn(project)
+        grant(project, viewer, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/diagrams/${diagram.id}/versions")
+                .with(jwt().jwt { it.subject(viewer) })
+                .contentType("application/json")
+                .content("""{"body": {"id": "${diagram.redisId}", "title": "x", "type": "ClassDiagram", "version": "4.0.0"}}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    // --- share ---
+
+    @Test
+    fun `shareProject con email desconocido responde 404 y no crea permiso`() {
+        val owner = newSubject()
+        val project = createProjectAs(owner, "Private")
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/share")
+                .with(jwt().jwt { it.subject(owner) })
+                .contentType("application/json")
+                .content("""{"email": "unknown@example.com", "role": "VIEWER"}""")
+        ).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `shareProject otorga COLLABORATOR a un usuario conocido`() {
+        val owner = newSubject()
+        val target = newSubject()
+        usersService.trackKeycloakUser(target, "target@example.com")
+        val project = createProjectAs(owner, "Private")
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/share")
+                .with(jwt().jwt { it.subject(owner) })
+                .contentType("application/json")
+                .content("""{"email": "target@example.com", "role": "COLLABORATOR"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.role").value("COLLABORATOR"))
+
+        mockMvc.perform(get("/api/v1/projects/${project.id}").with(jwt().jwt { it.subject(target) }))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.myPermission").value("COLLABORATOR"))
+    }
+
+    @Test
+    fun `re-compartir actualiza el rol existente en vez de duplicarlo`() {
+        val owner = newSubject()
+        val target = newSubject()
+        usersService.trackKeycloakUser(target, "target2@example.com")
+        val project = createProjectAs(owner, "Private")
+        grant(project, target, ProjectPermissionType.VIEWER)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/share")
+                .with(jwt().jwt { it.subject(owner) })
+                .contentType("application/json")
+                .content("""{"email": "target2@example.com", "role": "COLLABORATOR"}""")
+        ).andExpect(status().isOk)
+
+        val targetUser = usersService.trackKeycloakUser(target)
+        val permissions = projectPermissionRepository.findAllByUser_KeycloakId(target)
+        assertEquals(1, permissions.size, "no debe duplicar la fila de permiso")
+        assertEquals(ProjectPermissionType.COLLABORATOR, permissions.single().permission)
+    }
+
+    @Test
+    fun `shareProject con el propio email del owner responde 403`() {
+        val owner = newSubject()
+        usersService.trackKeycloakUser(owner, "owner@example.com")
+        val project = createProjectAs(owner, "Private")
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/share")
+                .with(jwt().jwt { it.subject(owner) })
+                .contentType("application/json")
+                .content("""{"email": "owner@example.com", "role": "VIEWER"}""")
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shareProject de un usuario que no es OWNER responde 403`() {
+        val owner = newSubject()
+        val collaborator = newSubject()
+        val target = newSubject()
+        usersService.trackKeycloakUser(target, "target3@example.com")
+        val project = createProjectAs(owner, "Private")
+        grant(project, collaborator, ProjectPermissionType.COLLABORATOR)
+
+        mockMvc.perform(
+            post("/api/v1/projects/${project.id}/share")
+                .with(jwt().jwt { it.subject(collaborator) })
+                .contentType("application/json")
+                .content("""{"email": "target3@example.com", "role": "VIEWER"}""")
+        ).andExpect(status().isForbidden)
+
+        assertEquals(0, projectPermissionRepository.findAllByUser_KeycloakId(target).size)
     }
 }

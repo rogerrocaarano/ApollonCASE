@@ -1,6 +1,7 @@
 package com.rocayasociados.extensionbackend.projects
 
 import com.rocayasociados.extensionbackend.users.User
+import com.rocayasociados.extensionbackend.users.UsersRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
@@ -8,22 +9,34 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
+/** A project paired with the requester's own permission on it. */
+data class ProjectAccess(val project: Project, val permission: ProjectPermissionType)
+
 @Service
 @Transactional
 class ProjectsService(
     private val projectsRepository: ProjectsRepository,
+    private val projectPermissionRepository: ProjectPermissionRepository,
+    private val usersRepository: UsersRepository,
     private val diagramsRepository: DiagramsRepository,
     private val diagramsBackendClient: DiagramsBackendClient,
     private val wsTicketService: WsTicketService,
 ) {
-    fun getProject(projectId: UUID, requesterKeycloakId: String): Project =
-        getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+    fun getProject(projectId: UUID, requesterKeycloakId: String): ProjectAccess {
+        val permission = requirePermissionRow(projectId, requesterKeycloakId, ProjectPermissionType.VIEWER)
+        return ProjectAccess(permission.project, permission.permission)
+    }
 
-    fun listOwnProjects(requesterKeycloakId: String): List<Project> =
-        projectsRepository.findAllByOwner_KeycloakIdOrderByUpdatedAtDesc(requesterKeycloakId)
+    /** Every project the requester has any `ProjectPermission` on, most recently modified first. */
+    fun listAccessibleProjects(requesterKeycloakId: String): List<ProjectAccess> {
+        val projects = projectsRepository.findAllAccessibleByUser_KeycloakIdOrderByUpdatedAtDesc(requesterKeycloakId)
+        val permissionByProjectId = projectPermissionRepository.findAllByUser_KeycloakId(requesterKeycloakId)
+            .associateBy { it.project.id }
+        return projects.map { ProjectAccess(it, requireNotNull(permissionByProjectId[it.id]).permission) }
+    }
 
     fun listProjectDiagrams(projectId: UUID, requesterKeycloakId: String): List<Diagram> {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         return diagramsRepository.findAllByProject_Id(requireNotNull(project.id))
     }
 
@@ -35,7 +48,7 @@ class ProjectsService(
      * whole list.
      */
     fun listProjectDiagramsWithMetadata(projectId: UUID, requesterKeycloakId: String): List<ProjectDiagramResponse> {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         val diagrams = diagramsRepository.findAllByProject_Id(requireNotNull(project.id))
         return diagrams.map { diagram ->
             try {
@@ -60,7 +73,7 @@ class ProjectsService(
 
     /** Creates a diagram body in `diagrams-backend` and links it to the project. */
     fun createDiagramInProject(projectId: UUID, model: Map<String, Any?>, requesterKeycloakId: String): Diagram {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         val created = diagramsBackendClient.createDiagram(model)
         val redisId = created["id"] as? String
             ?: throw IllegalStateException("diagrams-backend did not return an id for the created diagram")
@@ -70,33 +83,37 @@ class ProjectsService(
         return saved
     }
 
+    /** Creates a project and grants its creator `OWNER` on it. */
     fun createProject(name: String, description: String, owner: User): Project {
-        val project = Project(name = name, description = description, owner = owner)
-        return projectsRepository.save(project)
+        val project = projectsRepository.save(Project(name = name, description = description))
+        projectPermissionRepository.save(
+            ProjectPermission(project = project, user = owner, permission = ProjectPermissionType.OWNER)
+        )
+        return project
     }
 
     fun changeProjectName(projectId: UUID, newName: String, requesterKeycloakId: String): Project {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.OWNER)
         project.name = newName
         return projectsRepository.save(touch(project))
     }
 
     fun changeProjectDescription(projectId: UUID, newDescription: String, requesterKeycloakId: String): Project {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.OWNER)
         project.description = newDescription
         return projectsRepository.save(touch(project))
     }
 
     /** Deletes a single diagram from a project, in both extension-backend and diagrams-backend. */
     fun deleteDiagram(projectId: UUID, diagramId: UUID, requesterKeycloakId: String) {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.OWNER)
         diagramsBackendClient.deleteDiagram(diagram.redisId)
         diagramsRepository.delete(diagram)
     }
 
     /** Fetches a project diagram's current body from `diagrams-backend`. */
     fun getDiagramBody(projectId: UUID, diagramId: UUID, requesterKeycloakId: String): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         return diagramsBackendClient.getDiagram(diagram.redisId)
     }
 
@@ -108,7 +125,7 @@ class ProjectsService(
         body: Map<String, Any?>,
         ifMatch: String?,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         return diagramsBackendClient.putDiagram(diagram.redisId, body, ifMatch)
     }
 
@@ -119,7 +136,7 @@ class ProjectsService(
         limit: Int?,
         before: String?,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         return diagramsBackendClient.listVersions(diagram.redisId, limit, before)
     }
 
@@ -129,7 +146,7 @@ class ProjectsService(
         requesterKeycloakId: String,
         request: Map<String, Any?>,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         return diagramsBackendClient.createVersion(diagram.redisId, request)
     }
 
@@ -139,7 +156,7 @@ class ProjectsService(
         versionId: String,
         requesterKeycloakId: String,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         return diagramsBackendClient.getVersion(diagram.redisId, versionId)
     }
 
@@ -150,7 +167,7 @@ class ProjectsService(
         requesterKeycloakId: String,
         request: Map<String, Any?>,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         return diagramsBackendClient.restoreVersion(diagram.redisId, versionId, request)
     }
 
@@ -161,7 +178,7 @@ class ProjectsService(
         requesterKeycloakId: String,
         request: Map<String, Any?>,
     ): Map<String, Any?> {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         return diagramsBackendClient.renameVersion(diagram.redisId, versionId, request)
     }
 
@@ -171,13 +188,13 @@ class ProjectsService(
         versionId: String,
         requesterKeycloakId: String,
     ) {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.OWNER)
         diagramsBackendClient.deleteVersion(diagram.redisId, versionId)
     }
 
     /** Issues a short-lived, single-use ticket authorizing a collaboration WS connection to this diagram. */
     fun issueWsTicket(projectId: UUID, diagramId: UUID, requesterKeycloakId: String): String {
-        val diagram = getOwnedDiagramOrThrow(projectId, diagramId, requesterKeycloakId)
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.COLLABORATOR)
         return wsTicketService.issueTicket(diagram.redisId)
     }
 
@@ -190,11 +207,35 @@ class ProjectsService(
      * `createDiagramInProject` call has since inserted on the owning side.
      */
     fun deleteProject(projectId: UUID, requesterKeycloakId: String) {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.OWNER)
         val diagrams = diagramsRepository.findAllByProject_Id(requireNotNull(project.id))
         diagrams.forEach { diagramsBackendClient.deleteDiagram(it.redisId) }
         diagramsRepository.deleteAll(diagrams)
         projectsRepository.delete(project)
+    }
+
+    /**
+     * Grants (or updates) another user's `COLLABORATOR`/`VIEWER` access to a
+     * project by email. Only the project's `OWNER` may call this. Rejects an
+     * unknown email or the owner's own email without making any change.
+     */
+    fun shareProject(
+        projectId: UUID,
+        requesterKeycloakId: String,
+        targetEmail: String,
+        role: ProjectPermissionType,
+    ): ProjectPermission {
+        require(role != ProjectPermissionType.OWNER) { "Sharing cannot grant OWNER" }
+        val project = requirePermission(projectId, requesterKeycloakId, ProjectPermissionType.OWNER)
+        val target = usersRepository.findByEmail(targetEmail)
+            ?: throw NoSuchElementException("No user found for email $targetEmail")
+        if (target.keycloakId == requesterKeycloakId) {
+            throw AccessDeniedException("A project's OWNER cannot share it with themself")
+        }
+        val existing = projectPermissionRepository.findByProject_IdAndUser_Id(projectId, requireNotNull(target.id))
+        val permission = existing?.also { it.permission = role }
+            ?: ProjectPermission(project = project, user = target, permission = role)
+        return projectPermissionRepository.save(permission)
     }
 
     private fun touch(project: Project): Project {
@@ -202,17 +243,33 @@ class ProjectsService(
         return project
     }
 
-    private fun getOwnedProjectOrThrow(projectId: UUID, requesterKeycloakId: String): Project {
-        val project = projectsRepository.findByIdOrNull(projectId)
+    private fun requirePermissionRow(
+        projectId: UUID,
+        requesterKeycloakId: String,
+        minimum: ProjectPermissionType,
+    ): ProjectPermission {
+        projectsRepository.findByIdOrNull(projectId)
             ?: throw NoSuchElementException("Project with id $projectId not found")
-        if (project.owner.keycloakId != requesterKeycloakId) {
-            throw AccessDeniedException("User does not own project $projectId")
+        val granted = projectPermissionRepository.findByProject_IdAndUser_KeycloakId(projectId, requesterKeycloakId)
+        if (granted == null || granted.permission < minimum) {
+            throw AccessDeniedException("User does not have $minimum access to project $projectId")
         }
-        return project
+        return granted
     }
 
-    private fun getOwnedDiagramOrThrow(projectId: UUID, diagramId: UUID, requesterKeycloakId: String): Diagram {
-        val project = getOwnedProjectOrThrow(projectId, requesterKeycloakId)
+    private fun requirePermission(
+        projectId: UUID,
+        requesterKeycloakId: String,
+        minimum: ProjectPermissionType,
+    ): Project = requirePermissionRow(projectId, requesterKeycloakId, minimum).project
+
+    private fun requireDiagramPermission(
+        projectId: UUID,
+        diagramId: UUID,
+        requesterKeycloakId: String,
+        minimum: ProjectPermissionType,
+    ): Diagram {
+        val project = requirePermission(projectId, requesterKeycloakId, minimum)
         return diagramsRepository.findByIdOrNull(diagramId)
             ?.takeIf { it.project.id == project.id }
             ?: throw NoSuchElementException("Diagram $diagramId not found in project $projectId")

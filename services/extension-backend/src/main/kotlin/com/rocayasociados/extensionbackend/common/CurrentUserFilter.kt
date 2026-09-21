@@ -28,7 +28,8 @@ class CurrentUserFilter(
     ) {
         val authentication = SecurityContextHolder.getContext().authentication
         if (authentication is JwtAuthenticationToken) {
-            currentUserHolder.user = usersService.trackKeycloakUser(authentication.token.requiredSubject)
+            val jwt = authentication.token
+            currentUserHolder.user = usersService.trackKeycloakUser(jwt.requiredSubject, jwt.email)
         }
         filterChain.doFilter(request, response)
     }

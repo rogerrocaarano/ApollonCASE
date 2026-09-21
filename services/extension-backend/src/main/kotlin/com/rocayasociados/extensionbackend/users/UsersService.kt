@@ -9,14 +9,24 @@ class UsersService(
     private val repository: UsersRepository
 ) {
 
-    fun trackKeycloakUser(keycloakId: String): User =
-        repository.findByKeycloakId(keycloakId) ?: repository.save(User(keycloakId = keycloakId))
+    /**
+     * Resolves (creating if needed) the `User` for a Keycloak subject, syncing
+     * `email` from the token's `email` claim on every call. Only writes when
+     * the claim is present and differs from what's stored — a token without
+     * an `email` claim (e.g. a test JWT) never blanks out a known email.
+     */
+    fun trackKeycloakUser(keycloakId: String, tokenEmail: String? = null): User {
+        val existing = repository.findByKeycloakId(keycloakId)
+        val user = existing ?: User(keycloakId = keycloakId)
+        val emailChanged = tokenEmail != null && tokenEmail != user.email
+        if (emailChanged) user.email = tokenEmail
+        return if (existing == null || emailChanged) repository.save(user) else user
+    }
 
-    fun updateProfile(keycloakId: String, displayName: String?, email: String?): User {
+    fun updateProfile(keycloakId: String, displayName: String?): User {
         val user = repository.findByKeycloakId(keycloakId)
             ?: throw NoSuchElementException("User with keycloakId $keycloakId not found")
         displayName?.let { user.displayName = it }
-        email?.let { user.email = it }
         return repository.save(user)
     }
 }

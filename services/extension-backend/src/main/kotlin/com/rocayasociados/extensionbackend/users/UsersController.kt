@@ -23,6 +23,5 @@ class UsersController(
         usersService.updateProfile(
             currentUserHolder.user.keycloakId,
             request.displayName,
-            request.email,
         ).toResponse()
 }

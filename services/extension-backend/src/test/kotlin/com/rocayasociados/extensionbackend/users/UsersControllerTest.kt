@@ -98,7 +98,7 @@ class UsersControllerTest {
     }
 
     @Test
-    fun `updateMe con solo email no toca el displayName`() {
+    fun `updateMe ignora un email enviado manualmente`() {
         val subject = "test-subject-${UUID.randomUUID()}"
         mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
         mockMvc.perform(
@@ -112,25 +112,51 @@ class UsersControllerTest {
             patch("/api/v1/me")
                 .with(jwt().jwt { it.subject(subject) })
                 .contentType("application/json")
-                .content("""{"email": "ada@example.com"}""")
+                .content("""{"displayName": "Ada Lovelace", "email": "ada@example.com"}""")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.email").value("ada@example.com"))
+            .andExpect(jsonPath("$.email").value(nullValue()))
             .andExpect(jsonPath("$.displayName").value("Ada Lovelace"))
+
+        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
     }
 
     @Test
-    fun `updateMe con email invalido responde 400`() {
+    fun `usuario nuevo obtiene el email del claim del token`() {
         val subject = "test-subject-${UUID.randomUUID()}"
-        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
 
         mockMvc.perform(
-            patch("/api/v1/me")
-                .with(jwt().jwt { it.subject(subject) })
-                .contentType("application/json")
-                .content("""{"email": "not-an-email"}""")
-        ).andExpect(status().isBadRequest)
+            get("/api/v1/me").with(jwt().jwt { it.subject(subject).claim("email", "new-user@example.com") })
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value("new-user@example.com"))
+            .andExpect(jsonPath("$.displayName").value(nullValue()))
+    }
 
-        assertEquals(null, usersRepository.findByKeycloakId(subject)?.email)
+    @Test
+    fun `el email se actualiza si el claim del token cambia`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+
+        mockMvc.perform(
+            get("/api/v1/me").with(jwt().jwt { it.subject(subject).claim("email", "old@example.com") })
+        ).andExpect(jsonPath("$.email").value("old@example.com"))
+
+        mockMvc.perform(
+            get("/api/v1/me").with(jwt().jwt { it.subject(subject).claim("email", "new@example.com") })
+        ).andExpect(jsonPath("$.email").value("new@example.com"))
+
+        assertEquals("new@example.com", usersRepository.findByKeycloakId(subject)?.email)
+    }
+
+    @Test
+    fun `un token sin claim email no borra el email ya almacenado`() {
+        val subject = "test-subject-${UUID.randomUUID()}"
+
+        mockMvc.perform(
+            get("/api/v1/me").with(jwt().jwt { it.subject(subject).claim("email", "kept@example.com") })
+        )
+
+        mockMvc.perform(get("/api/v1/me").with(jwt().jwt { it.subject(subject) }))
+            .andExpect(jsonPath("$.email").value("kept@example.com"))
     }
 }

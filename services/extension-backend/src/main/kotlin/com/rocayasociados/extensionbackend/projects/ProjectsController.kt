@@ -42,7 +42,7 @@ class ProjectsController(
     fun listProjects(
         @AuthenticationPrincipal jwt: Jwt,
     ): List<ProjectResponse> =
-        projectsService.listOwnProjects(jwt.requiredSubject).map { it.toResponse() }
+        projectsService.listAccessibleProjects(jwt.requiredSubject).map { it.toResponse() }
 
     @Operation(
         summary = "Obtiene un proyecto por id",
@@ -55,6 +55,27 @@ class ProjectsController(
         @AuthenticationPrincipal jwt: Jwt,
     ): ProjectResponse =
         projectsService.getProject(projectId, jwt.requiredSubject).toResponse()
+
+    @Operation(
+        summary = "Comparte un proyecto con otro usuario por email",
+        description = "Otorga (o actualiza) el rol COLLABORATOR o VIEWER de otro usuario sobre el proyecto. Solo el OWNER puede hacerlo.",
+        responses = [
+            ApiResponse(responseCode = "403", description = "El usuario autenticado no es el OWNER del proyecto, o intenta compartir consigo mismo"),
+            ApiResponse(responseCode = "404", description = "El email no corresponde a ningún usuario conocido"),
+        ]
+    )
+    @PostMapping("/{projectId}/share")
+    fun shareProject(
+        @Parameter(description = "Id del proyecto") @PathVariable projectId: UUID,
+        @Valid @RequestBody request: ShareProjectRequest,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ProjectPermissionResponse =
+        projectsService.shareProject(
+            projectId,
+            jwt.requiredSubject,
+            request.email,
+            request.role.toProjectPermissionType(),
+        ).toResponse()
 
     @Operation(
         summary = "Lista los diagramas de un proyecto",
@@ -79,7 +100,8 @@ class ProjectsController(
     ): ResponseEntity<ProjectResponse> {
         val owner = usersService.trackKeycloakUser(jwt.requiredSubject)
         val project = projectsService.createProject(request.name, request.description, owner)
-        return ResponseEntity.created(URI.create("/api/v1/projects/${project.id}")).body(project.toResponse())
+        val response = ProjectAccess(project, ProjectPermissionType.OWNER).toResponse()
+        return ResponseEntity.created(URI.create("/api/v1/projects/${project.id}")).body(response)
     }
 
     @Operation(
