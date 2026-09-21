@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import {
-  ExtensionApiClient,
-  ExtensionApiError,
-  ProjectsApiClient,
-} from "./ExtensionApiClient"
+import { ExtensionApiError, ProjectsApiClient } from "./ExtensionApiClient"
 
 vi.mock("@/auth/oidcConfig", () => ({
   getAccessToken: vi.fn().mockResolvedValue("test-token"),
@@ -18,7 +14,7 @@ const jsonResponse = (body: unknown, status = 200) =>
 /** jsdom resolves the client's relative URL against its default origin. */
 const pathOf = (url: string) => new URL(url, "http://localhost").pathname
 
-describe("ExtensionApiClient / ProjectsApiClient", () => {
+describe("ProjectsApiClient", () => {
   const fetchMock = vi.fn()
 
   beforeEach(() => {
@@ -30,39 +26,6 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
     vi.unstubAllGlobals()
   })
 
-  it("me() sends a GET with a bearer token", async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({ id: "u1", keycloakId: "kc-1" })
-    )
-
-    const result = await ExtensionApiClient.me()
-
-    expect(result).toEqual({ id: "u1", keycloakId: "kc-1" })
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(pathOf(url)).toBe("/api/v1/me")
-    expect(init.method).toBe("GET")
-    expect(init.headers.Authorization).toBe("Bearer test-token")
-  })
-
-  it("updateMe() sends a PATCH with a JSON body", async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        id: "u1",
-        keycloakId: "kc-1",
-        displayName: "Ada Lovelace",
-        email: null,
-      })
-    )
-
-    await ExtensionApiClient.updateMe({ displayName: "Ada Lovelace" })
-
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(pathOf(url)).toBe("/api/v1/me")
-    expect(init.method).toBe("PATCH")
-    expect(init.headers["Content-Type"]).toBe("application/json")
-    expect(JSON.parse(init.body)).toEqual({ displayName: "Ada Lovelace" })
-  })
-
   it("list() sends a GET to /api/v1/projects", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([]))
 
@@ -72,6 +35,7 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
     expect(pathOf(url)).toBe("/api/v1/projects")
     expect(init.method).toBe("GET")
     expect(init.body).toBeUndefined()
+    expect(init.headers.Authorization).toBe("Bearer test-token")
   })
 
   it("get() sends a GET to the project id", async () => {

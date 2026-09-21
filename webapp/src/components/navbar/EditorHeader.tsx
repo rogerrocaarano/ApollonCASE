@@ -9,11 +9,12 @@ import {
 } from "@tumaet/ui/components/tooltip"
 import { useModalContext } from "@/contexts"
 import { useMediaQuery } from "@/hooks"
-import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance"
+import { useEditorBackTarget } from "@/hooks/useEditorBackTarget"
 import { BrandLockup } from "./BrandLockup"
 import { BackNav } from "./BackNav"
 import { FileMenu } from "./FileMenu"
 import { HelpMenu } from "./HelpMenu"
+import { UserMenu } from "./UserMenu"
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton"
 import { VersionHistoryButton } from "./VersionHistoryButton"
 import { ThemeSwitcherMenu } from "./ThemeSwitcher"
@@ -75,6 +76,7 @@ export function EditorHeaderRow({ layout, hideBrand }: EditorHeaderRowProps) {
  * is just the always-present back control.
  */
 export function HeaderBrandIsland({ showLogo = true }: { showLogo?: boolean }) {
+  const backTarget = useEditorBackTarget()
   return (
     <Island as="header" role="banner" ariaLabel="Editor">
       {showLogo && (
@@ -94,11 +96,7 @@ export function HeaderBrandIsland({ showLogo = true }: { showLogo?: boolean }) {
           <GroupDivider />
         </>
       )}
-      <BackNav
-        to="/"
-        label={ALL_DIAGRAMS_LABEL}
-        labelClassName="hidden lg:inline"
-      />
+      <BackNav {...backTarget} labelClassName="hidden lg:inline" />
     </Island>
   )
 }
@@ -152,6 +150,7 @@ export function HeaderActionsIsland() {
       </div>
       <GroupDivider />
       <div className="flex items-center gap-0.5">
+        <UserMenu reveal="lg" />
         <HelpMenu />
         <ThemeSwitcherMenu />
       </div>

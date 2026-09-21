@@ -5,6 +5,7 @@ import { BackNav } from "./BackNav"
 import { BrandLockup } from "./BrandLockup"
 import { ThemeSwitcherMenu } from "./ThemeSwitcher"
 import { HomeHelpMenu } from "@/components/home/HomeHelpMenu"
+import { UserMenu } from "./UserMenu"
 import { useBackTarget } from "@/hooks/useBackTarget"
 
 /**
@@ -51,6 +52,7 @@ export const ChromeSubHeader = () => {
           toggle. No "…" overflow: it would hide Theme behind two taps for no space
           saving. Matches the editor/home actions islands. */}
         <Island ariaLabel="Page actions">
+          <UserMenu reveal="lg" />
           <HomeHelpMenu reveal="lg" />
           <ThemeSwitcherMenu />
         </Island>

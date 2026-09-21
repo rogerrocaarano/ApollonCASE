@@ -9,16 +9,11 @@ import { DiagramApiClient } from "@/services/DiagramApiClient"
 
 const addSharedDiagramEntryMock = vi.fn()
 
-const { meMock } = vi.hoisted(() => ({ meMock: vi.fn() }))
-
 vi.mock("react-oidc-context", () => ({
-  useAuth: () => ({ isAuthenticated: true }),
-}))
-
-vi.mock("@/services/ExtensionApiClient", () => ({
-  ExtensionApiClient: {
-    me: () => meMock(),
-  },
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { profile: { given_name: "tester", family_name: "", email: null } },
+  }),
 }))
 
 // Holds the page's control-event listener so tests can dispatch a real
@@ -269,13 +264,6 @@ beforeEach(() => {
   versionHoisted.state.exitPreview.mockImplementation(() => {
     versionHoisted.state.preview = null
   })
-  meMock.mockReset()
-  meMock.mockResolvedValue({
-    id: "u1",
-    keycloakId: "kc-1",
-    displayName: "tester",
-    email: null,
-  })
 })
 
 afterEach(() => {
@@ -425,64 +413,6 @@ describe("ApollonShared — loading-state regression", () => {
 
     expect(fetchDiagram).not.toHaveBeenCalled()
     expect(infoToast).not.toHaveBeenCalled()
-  })
-
-  it("re-opens the profile prompt for each new diagram when no display name is set", async () => {
-    meMock.mockResolvedValue({
-      id: "u1",
-      keycloakId: "kc-1",
-      displayName: null,
-      email: null,
-    })
-    const { history } = mountAt("/shared/abc?view=COLLABORATE")
-
-    await waitFor(() => {
-      expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "EDIT_PROFILE",
-        expect.any(Object)
-      )
-    })
-
-    modalHoisted.openModal.mockClear()
-    await act(async () => {
-      history.push("/shared/def?view=COLLABORATE")
-    })
-    await waitFor(() =>
-      expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "EDIT_PROFILE",
-        expect.any(Object)
-      )
-    )
-  })
-
-  it("returns home when the profile-completion prompt is dismissed", async () => {
-    meMock.mockResolvedValue({
-      id: "u1",
-      keycloakId: "kc-1",
-      displayName: null,
-      email: null,
-    })
-    const { router } = mountAt("/shared/abc?view=COLLABORATE")
-
-    await waitFor(() => {
-      expect(modalHoisted.openModal).toHaveBeenCalledWith(
-        "EDIT_PROFILE",
-        expect.objectContaining({
-          onClose: expect.any(Function),
-        })
-      )
-    })
-
-    const modalProps = modalHoisted.openModal.mock.calls[0]?.[1] as
-      | { onClose?: () => void }
-      | undefined
-
-    await act(async () => {
-      modalProps?.onClose?.()
-    })
-
-    // In-memory history never touches window.location; assert router state.
-    await waitFor(() => expect(router.state.location.pathname).toBe("/"))
   })
 
   it("toasts and redirects home when the view param is absent/invalid", async () => {

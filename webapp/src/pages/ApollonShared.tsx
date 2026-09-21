@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react"
-import { useEditorContext, useModalContext } from "@/contexts"
+import { useEditorContext } from "@/contexts"
 import {
   ApollonEditor,
   ApollonMode,
@@ -18,8 +18,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-toastify"
 import { DiagramView } from "@/types"
-import { CURRENT_USER_QUERY_KEY, useCurrentUser } from "@/hooks/useCurrentUser"
-import type { CurrentUser } from "@/services/ExtensionApiClient"
+import { useTokenIdentity } from "@/hooks/useTokenIdentity"
 import {
   createDiagramAutosaver,
   type DiagramAutosaver,
@@ -97,7 +96,6 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
   const kind = useVersionRepositoryKind()
   const gateway = useDiagramGateway()
   const { setEditor, editor } = useEditorContext()
-  const { openModal } = useModalContext()
   const [diagramTitle, setDiagramTitle] = useState<string | null>(null)
   useDocumentTitle(diagramTitle)
 
@@ -128,7 +126,6 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
    * canvas — not against whichever overlay is currently shown.
    */
   const prePreviewFingerprintRef = useRef<string | null>(null)
-  const hasPromptedRef = useRef(false)
   const lifecycleKeyRef = useRef<string | null>(null)
   // True when the current preview's body differs from the canvas the user
   // had before entering preview. Computed once on preview entry and held
@@ -136,15 +133,13 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
   // re-fingerprinting on every render. False = restoring would be a no-op
   // (e.g. the latest saved version with no unsaved local changes).
   const [canRestoreFromPreview, setCanRestoreFromPreview] = useState(false)
-  const { data: currentUser } = useCurrentUser()
-  const displayName = currentUser?.displayName?.trim() || null
-  // Derived, not stored: once `currentUser.displayName` is set (either already,
-  // or just saved via the EDIT_PROFILE prompt below, which updates the shared
-  // query cache), this recomputes on the next render — no separate state to
-  // keep in sync with the account's own name. Memoized on the trimmed name
-  // (a primitive) rather than recreated fresh every render — the editor-mount
-  // effect below depends on this object's identity, and a fresh literal each
-  // render would re-trigger it (and reconnect the editor) continuously.
+  const { displayName } = useTokenIdentity()
+  // Derived from the current Keycloak token on every render (see
+  // `useTokenIdentity`) — never stored, never gated on. Memoized on the
+  // trimmed name (a primitive) rather than recreated fresh every render — the
+  // editor-mount effect below depends on this object's identity, and a fresh
+  // literal each render would re-trigger it (and reconnect the editor)
+  // continuously.
   const collaborationUser = useMemo(
     () =>
       displayName
@@ -185,7 +180,6 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
     lifecycleKeyRef.current = nextLifecycleKey
     diagramIsUpdated.current = false
     restoredDuringPreviewRef.current = false
-    hasPromptedRef.current = false
   }, [diagramId, viewType])
 
   // validateSearch has already coerced an unknown ?view to undefined.
@@ -196,45 +190,16 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
   }, [viewType, navigate])
 
   const isCollaborationView = viewType === DiagramView.COLLABORATE
-  const needsCollabName = isCollaborationView && !collaborationUser
 
-  // `currentUser` still loading is also `!collaborationUser`, but isn't a
-  // reason to prompt yet — wait for it to resolve one way or the other.
-  // Prompt once per diagram — the seed query stays disabled until a name exists.
-  useEffect(() => {
-    if (!viewType || !needsCollabName || !currentUser || hasPromptedRef.current)
-      return
-    hasPromptedRef.current = true
-    openModal("EDIT_PROFILE", {
-      dialogVariant: "home",
-      user: currentUser,
-      requireDisplayName: true,
-      onUpdated: (updated: CurrentUser) => {
-        queryClient.setQueryData(CURRENT_USER_QUERY_KEY, updated)
-      },
-      onClose: () => {
-        navigate({ to: "/", replace: true })
-      },
-    })
-  }, [
-    viewType,
-    needsCollabName,
-    currentUser,
-    diagramId,
-    openModal,
-    navigate,
-    queryClient,
-  ])
-
-  // One-shot editor seed; while its preconditions are unmet (missing view,
-  // unresolved collaboration name) it stays pending, which keeps the overlay up.
+  // One-shot editor seed; while its preconditions are unmet (missing view) it
+  // stays pending, which keeps the overlay up.
   const {
     diagram,
     error: seedError,
     isPending: seedPending,
   } = useDiagramSeed(
     diagramId,
-    Boolean(diagramId) && Boolean(viewType) && !needsCollabName,
+    Boolean(diagramId) && Boolean(viewType),
     gateway.client
   )
 
@@ -254,7 +219,6 @@ export const ApollonShared: React.FC<ApollonSharedProps> = ({
   useEffect(() => {
     const container = containerRef.current
     if (!container || !diagramId || !viewType || !diagram) return
-    if (isCollaborationView && !collaborationUser) return
 
     let instance: ApollonEditor | null = null
     let modelChangeSubscriptionId: number | null = null

@@ -37,16 +37,12 @@ const wsHoisted = vi.hoisted(() => ({
   control: null as ((event: ControlEvent) => void) | null,
 }))
 const editorHoisted = vi.hoisted(() => ({ instance: null as unknown }))
-const meHoisted = vi.hoisted(() => ({ me: vi.fn() }))
 
 vi.mock("react-oidc-context", () => ({
-  useAuth: () => ({ isAuthenticated: true }),
-}))
-
-vi.mock("@/services/ExtensionApiClient", () => ({
-  ExtensionApiClient: {
-    me: () => meHoisted.me(),
-  },
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { profile: { given_name: "tester", family_name: "", email: null } },
+  }),
 }))
 
 const FakeApollonEditor = vi.hoisted(
@@ -159,13 +155,6 @@ async function mountEditor({
 }
 
 beforeEach(() => {
-  meHoisted.me.mockReset()
-  meHoisted.me.mockResolvedValue({
-    id: "u1",
-    keycloakId: "kc-1",
-    displayName: "tester",
-    email: null,
-  })
   wsHoisted.control = null
   editorHoisted.instance = null
   fetchDiagram.mockReset()

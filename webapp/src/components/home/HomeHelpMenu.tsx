@@ -1,20 +1,11 @@
 import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import {
-  ChevronDownIcon,
-  CircleHelpIcon,
-  LogOutIcon,
-  UserPenIcon,
-} from "lucide-react"
+import { ChevronDownIcon, CircleHelpIcon } from "lucide-react"
 import { Link } from "@tanstack/react-router"
-import { useAuth } from "react-oidc-context"
 import { Button } from "@tumaet/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@tumaet/ui/components/dropdown-menu"
@@ -32,9 +23,6 @@ import {
   type ChromeReveal,
 } from "@/components/navbar/styleConstants"
 import { MOBILE_MENU_CONTENT_CLASS } from "@/components/navbar/islandPrimitives"
-import type { CurrentUser } from "@/services/ExtensionApiClient"
-import { useModalContext } from "@/contexts"
-import { CURRENT_USER_QUERY_KEY, useCurrentUser } from "@/hooks/useCurrentUser"
 import { useHelpMenu } from "./useHelpMenu"
 
 /**
@@ -74,23 +62,6 @@ export function HelpMenuItems({
   // Impure wiring (modal opening + router-derived legal provenance) lives in the
   // hook; the item rendering below stays pure relative to its outputs.
   const { legalLinkState, openHowToUse, openAbout } = useHelpMenu(variant)
-  const auth = useAuth()
-  const queryClient = useQueryClient()
-  const { openModal } = useModalContext()
-  // Exercises the Authorization header end-to-end against extension-backend
-  // (see openspec/changes/add-keycloak-auth) - not just a login formality.
-  const { data: currentUser } = useCurrentUser()
-
-  const openEditProfile = () => {
-    if (!currentUser) return
-    openModal("EDIT_PROFILE", {
-      dialogVariant: "home",
-      user: currentUser,
-      onUpdated: (updated: CurrentUser) => {
-        queryClient.setQueryData(CURRENT_USER_QUERY_KEY, updated)
-      },
-    })
-  }
 
   return (
     <>
@@ -172,37 +143,6 @@ export function HelpMenuItems({
           </Link>
         }
       />
-      {auth.isAuthenticated && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            {currentUser && (
-              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                Signed in as{" "}
-                {currentUser.displayName?.trim() || currentUser.keycloakId}
-              </DropdownMenuLabel>
-            )}
-            <DropdownMenuItem
-              onClick={() => {
-                onSelect()
-                openEditProfile()
-              }}
-            >
-              <UserPenIcon className="size-4" aria-hidden />
-              Edit profile
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                onSelect()
-                void auth.signoutRedirect()
-              }}
-            >
-              <LogOutIcon className="size-4" aria-hidden />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </>
-      )}
     </>
   )
 }

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react"
 import { toast } from "react-toastify"
 import { Button } from "@tumaet/ui/components/button"
 import { PageShell } from "@/components/PageShell"
+import { UserMenu } from "@/components/navbar/UserMenu"
 import { ProjectGallery } from "@/components/projects/ProjectGallery"
 import { ProjectGallerySkeleton } from "@/components/projects/ProjectGallerySkeleton"
 import { useModalContext } from "@/contexts"
@@ -81,10 +82,13 @@ export const ProjectsPage = () => {
               Your projects
             </h1>
           </header>
-          <Button type="button" onClick={handleNewProject}>
-            <Plus className="size-4" aria-hidden />
-            New project
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button type="button" onClick={handleNewProject}>
+              <Plus className="size-4" aria-hidden />
+              New project
+            </Button>
+            <UserMenu reveal="always" />
+          </div>
         </div>
       }
     >

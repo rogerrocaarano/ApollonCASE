@@ -30,6 +30,7 @@ import { HomeRefinementChips } from "./HomeRefinementChips"
 import { HomeBrandPill } from "./HomeBrandPill"
 import { HomeActionsPill } from "./HomeActionsPill"
 import { HomeHelpMenu } from "./HomeHelpMenu"
+import { UserMenu } from "@/components/navbar/UserMenu"
 import type { HomeChrome } from "./useHomeChrome"
 
 /**
@@ -298,6 +299,7 @@ function HomeActionsIsland({
 
         <GroupDivider />
 
+        <UserMenu reveal="wide" />
         <HomeHelpMenu reveal="wide" />
         <ThemeSwitcherMenu />
       </Island>

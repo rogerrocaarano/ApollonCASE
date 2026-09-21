@@ -11,6 +11,7 @@ const {
   deleteDiagramMock,
   navigateMock,
   toastErrorMock,
+  signoutRedirectMock,
 } = vi.hoisted(() => ({
   getMock: vi.fn(),
   listDiagramsMock: vi.fn(),
@@ -19,10 +20,19 @@ const {
   deleteDiagramMock: vi.fn(),
   navigateMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  signoutRedirectMock: vi.fn(),
 }))
 
 vi.mock("@/contexts", () => ({
   useModalContext: () => ({ openModal: openModalMock, closeModal: vi.fn() }),
+}))
+
+vi.mock("react-oidc-context", () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    signoutRedirect: signoutRedirectMock,
+    user: { profile: { given_name: "Ada", family_name: "Lovelace", email: null } },
+  }),
 }))
 
 vi.mock("@/services/ExtensionApiClient", () => ({
@@ -79,6 +89,7 @@ describe("ProjectDetailPage", () => {
     deleteDiagramMock.mockReset()
     navigateMock.mockReset()
     toastErrorMock.mockReset()
+    signoutRedirectMock.mockReset()
     getMock.mockResolvedValue(project)
   })
 
@@ -107,6 +118,17 @@ describe("ProjectDetailPage", () => {
     renderPage()
 
     await screen.findByText("No diagrams yet")
+  })
+
+  it("offers a sign-out control that signs the user out", async () => {
+    listDiagramsMock.mockResolvedValue([])
+
+    renderPage()
+
+    fireEvent.click(await screen.findByRole("button", { name: "Account" }))
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }))
+
+    expect(signoutRedirectMock).toHaveBeenCalled()
   })
 
   it("opens the new-diagram modal scoped to this project", async () => {

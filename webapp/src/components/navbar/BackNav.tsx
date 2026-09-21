@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { ChevronLeft } from "lucide-react"
 import { cn } from "@tumaet/ui/lib/utils"
 import type { BackTarget } from "@/hooks/useBackTarget"
+import type { EditorBackTarget } from "@/hooks/useEditorBackTarget"
 
 type BackNavTone = "onDark" | "onSurface"
 
@@ -21,7 +22,7 @@ const toneClass: Record<BackNavTone, string> = {
  * Renders a real router <Link> (anchor) so cmd/middle-click opens a new tab and
  * the browser/native history stays coherent.
  */
-type BackNavProps = BackTarget & {
+type BackNavProps = (BackTarget | EditorBackTarget) & {
   tone?: BackNavTone
   /** Fired in addition to navigating — e.g. to close the mobile menu it lives in. */
   onNavigate?: () => void

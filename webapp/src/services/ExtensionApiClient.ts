@@ -3,13 +3,6 @@ import { extensionServerURL } from "@/constants"
 import { getAccessToken } from "@/auth/oidcConfig"
 import type { Project, ProjectDiagram } from "@/types"
 
-export interface CurrentUser {
-  id: string
-  keycloakId: string
-  displayName: string | null
-  email: string | null
-}
-
 interface RequestOpts {
   method?: "GET" | "POST" | "PATCH" | "DELETE"
   body?: unknown
@@ -41,13 +34,6 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
     return undefined as unknown as T
   }
   return res.json() as Promise<T>
-}
-
-export const ExtensionApiClient = {
-  me: () => request<CurrentUser>("/api/v1/me"),
-
-  updateMe: (input: { displayName?: string }) =>
-    request<CurrentUser>("/api/v1/me", { method: "PATCH", body: input }),
 }
 
 export const ProjectsApiClient = {

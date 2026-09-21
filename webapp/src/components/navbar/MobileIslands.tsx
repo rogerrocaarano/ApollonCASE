@@ -13,12 +13,13 @@ import {
 } from "@tumaet/ui/components/tooltip"
 import { CircleHelpIcon, FilesIcon, ShareIcon } from "lucide-react"
 import { useModalContext } from "@/contexts"
-import { ALL_DIAGRAMS_LABEL } from "@/lib/navProvenance"
+import { useEditorBackTarget } from "@/hooks/useEditorBackTarget"
 import { BackNav } from "./BackNav"
 import { FileMenuItems } from "./FileMenu"
 import { HelpMenuItems } from "@/components/home/HomeHelpMenu"
 import { SaveLocalCopyButton } from "./SaveLocalCopyButton"
 import { ThemeSwitcherMenu } from "./ThemeSwitcher"
+import { UserMenu } from "./UserMenu"
 import { VersionHistoryButton } from "./VersionHistoryButton"
 import {
   ISLAND_LAYOUT_STYLE,
@@ -92,6 +93,7 @@ const PILL_STYLE = ISLAND_LAYOUT_STYLE
  * the banner landmark for the e2e suite.
  */
 export function MobileBackPill() {
+  const backTarget = useEditorBackTarget()
   return (
     <header
       role="banner"
@@ -100,8 +102,8 @@ export function MobileBackPill() {
       style={PILL_STYLE}
     >
       {/* Chevron-only back (label hidden); the link's aria-label keeps the
-          accessible name "All diagrams". */}
-      <BackNav to="/" label={ALL_DIAGRAMS_LABEL} labelClassName="hidden" />
+          accessible name ("All diagrams" or "Project diagrams"). */}
+      <BackNav {...backTarget} labelClassName="hidden" />
     </header>
   )
 }
@@ -173,6 +175,9 @@ export function MobileActionsPill() {
       >
         {(close) => <HelpMenuItems variant="editor" onSelect={close} />}
       </MobileMenuButton>
+
+      {/* Account — its own dropdown (name + Sign out), no items to inline. */}
+      <UserMenu reveal="lg" />
 
       {/* Theme — a direct 1-tap icon toggle (no menu row needed). */}
       <ThemeSwitcherMenu />

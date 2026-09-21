@@ -16,6 +16,7 @@ import {
 } from "@tumaet/ui/components/alert-dialog"
 import { PageShell } from "@/components/PageShell"
 import { BackNav } from "@/components/navbar/BackNav"
+import { UserMenu } from "@/components/navbar/UserMenu"
 import {
   ProjectDiagramCard,
   type ResolvedProjectDiagram,
@@ -173,6 +174,7 @@ export const ProjectDetailPage = () => {
                   New diagram
                 </Button>
               ) : null}
+              <UserMenu reveal="always" />
             </div>
           </div>
         </div>
