@@ -53,7 +53,7 @@ export interface VersionRepository {
    * instance. New adapters are free to mint their own value —
    * exhaustive switches will fail to compile if not handled.
    */
-  readonly kind: "local" | "remote"
+  readonly kind: "local" | "remote" | "project"
 
   /** Maximum versions per diagram this backend will retain. */
   readonly cap: number

@@ -26,7 +26,19 @@ export class WebSocketManager {
   constructor(
     private diagramId: string,
     private instance: ApollonEditor,
-    private onError: (e: Event) => void
+    private onError: (e: Event) => void,
+    /**
+     * Resolves the URL for each (re)connect attempt. Defaults to the
+     * long-lived `diagrams-backend` URL, built fresh from `diagramId` every
+     * time but identical across attempts. A caller whose URL is single-use
+     * (e.g. a short-lived collaboration ticket) can return a `Promise` here
+     * instead, re-minted on every reconnect — see `ProjectDiagramGateway`.
+     * Returning a plain `string` keeps connection synchronous, which
+     * `WebSocketManager.test.ts` relies on for the default behavior.
+     */
+    private buildUrl: (diagramId: string) => string | Promise<string> = (
+      id
+    ) => `${serverWSSUrl}?diagramId=${encodeURIComponent(id)}`
   ) {
     this.instance.sendBroadcastMessage((diagramData) => {
       if (this.websocket?.readyState === WebSocket.OPEN) {
@@ -51,7 +63,24 @@ export class WebSocketManager {
   }
 
   private createWebSocket() {
-    const url = `${serverWSSUrl}?diagramId=${encodeURIComponent(this.diagramId)}`
+    const result = this.buildUrl(this.diagramId)
+    if (typeof result === "string") {
+      this.openSocket(result)
+      return
+    }
+    // Async URL (e.g. a freshly-minted ticket): resolve before connecting.
+    // A rejection (ticket fetch failed) is treated like any other connection
+    // failure — surfaced via onError and retried on the same backoff.
+    result.then(
+      (url) => this.openSocket(url),
+      (err) => {
+        this.onError(err as Event)
+        this.scheduleReconnect()
+      }
+    )
+  }
+
+  private openSocket(url: string) {
     this.websocket = new WebSocket(url)
 
     this.websocket.onopen = () => {

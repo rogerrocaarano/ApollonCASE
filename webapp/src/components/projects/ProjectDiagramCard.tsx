@@ -25,22 +25,21 @@ import {
   getDiagramTypeIcon,
   getDiagramTypeShortLabel,
 } from "@/components/home/diagramTypeMeta"
-import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks"
 
 export type ResolvedProjectDiagram =
   | {
-      /** `diagrams-backend` id — used to open the diagram in the editor. */
-      id: string
-      /** `extension-backend` `Diagram` row id — used to delete it from the project. */
+      /** `extension-backend` `Diagram` row id — used both to open and to delete it. Never the `diagrams-backend` id (see gate-project-diagrams). */
       diagramId: string
+      /** Owning project, needed to build the project-diagram route. */
+      projectId: string
       status: "ready"
       title: string
       type: UMLDiagramType
       lastModifiedAt: string
     }
   | {
-      id: string
       diagramId: string
+      projectId: string
       status: "failed"
     }
 
@@ -142,7 +141,8 @@ export function ProjectDiagramCard({
       className="home-diagram-card group relative flex min-h-40 flex-col gap-0 overflow-hidden rounded-[var(--apollon-chrome-radius-lg)] border border-[var(--apollon-chrome-border)] bg-[var(--home-card-surface)] py-0 shadow-[var(--apollon-chrome-shadow-floating)] transition-all duration-[280ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-accent-hover hover:shadow-[0_6px_16px_var(--home-shadow-card-hover)]"
     >
       <Link
-        {...sharedDiagramRoute(diagram.id)}
+        to="/projects/$projectId/diagrams/$diagramId"
+        params={{ projectId: diagram.projectId, diagramId: diagram.diagramId }}
         aria-label={`Open ${title}`}
         className="flex h-full w-full flex-col rounded-[inherit] p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       >

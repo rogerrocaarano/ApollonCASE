@@ -28,6 +28,9 @@ function RootLayout() {
   const isEditorRoute =
     path.startsWith("/local/") ||
     path.startsWith("/shared/") ||
+    // Only a project's diagram editor (not its gallery/detail page, which
+    // owns its own PageShell header) counts as an editor route.
+    /^\/projects\/[^/]+\/diagrams\//.test(path) ||
     path === "/playground"
 
   // The editor mounts its chrome as in-canvas overlay (portaled into the canvas)

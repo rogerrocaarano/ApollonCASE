@@ -14,9 +14,7 @@ import {
 } from "@tumaet/ui/components/tabs"
 import { log } from "@/logger"
 import { prepareTemplateModel } from "@/utils/templateModels"
-import { DiagramApiClient } from "@/services/DiagramApiClient"
 import { ProjectsApiClient } from "@/services/ExtensionApiClient"
-import { sharedDiagramRoute } from "@/utils/sharedDiagramLinks"
 import {
   HomeDialogActions,
   HomeDialogContent,
@@ -142,19 +140,20 @@ export const NewDiagramModal = ({ projectId }: NewDiagramModalProps) => {
   )
   const createModel = usePersistenceModelStore((state) => state.createModel)
 
-  // Creates the diagram body in `diagrams-backend` (same store a `/shared/*`
-  // diagram already uses), links it to the current project, then opens it in
-  // the collaborative editor. Navigation only happens once the link succeeds —
-  // an unlinked-but-created diagram is unreachable, not silently orphaned in
-  // the UI (see design.md's "two-network-call diagram creation" risk).
+  // extension-backend creates the diagram body in diagrams-backend
+  // server-side and links it to the project in one call — the browser never
+  // sees the diagrams-backend id (see gate-project-diagrams). Then opens it
+  // in the project-diagram collaborative editor.
   const createDiagramInProject = async (model: UMLModel) => {
     if (!projectId) return
     setIsCreatingInProject(true)
     try {
-      const created = await DiagramApiClient.createDiagram(model)
-      await ProjectsApiClient.linkDiagram(projectId, created.id)
+      const created = await ProjectsApiClient.createDiagram(projectId, model)
       closeModal()
-      navigate(sharedDiagramRoute(created.id))
+      navigate({
+        to: "/projects/$projectId/diagrams/$diagramId",
+        params: { projectId, diagramId: created.id },
+      })
     } catch (err) {
       log.error("Failed to create diagram in project", err as Error)
       toast.error("Could not create the diagram. Please try again.")

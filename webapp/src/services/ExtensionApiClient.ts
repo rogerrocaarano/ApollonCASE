@@ -1,3 +1,4 @@
+import type { UMLModel } from "@tumaet/apollon"
 import { extensionServerURL } from "@/constants"
 import { getAccessToken } from "@/auth/oidcConfig"
 import type { Project, ProjectDiagram } from "@/types"
@@ -55,10 +56,11 @@ export const ProjectsApiClient = {
   listDiagrams: (id: string) =>
     request<ProjectDiagram[]>(`/api/v1/projects/${id}/diagrams`),
 
-  linkDiagram: (id: string, redisId: string) =>
+  /** Creates a diagram from a model: extension-backend creates the body in diagrams-backend server-side. */
+  createDiagram: (id: string, model: UMLModel) =>
     request<ProjectDiagram>(`/api/v1/projects/${id}/diagrams`, {
       method: "POST",
-      body: { redisId },
+      body: { model },
     }),
 
   deleteProject: (id: string) =>
@@ -68,4 +70,11 @@ export const ProjectsApiClient = {
     request<void>(`/api/v1/projects/${projectId}/diagrams/${diagramId}`, {
       method: "DELETE",
     }),
+
+  /** Short-lived, single-use ticket authorizing one collaboration WS connection. */
+  issueWsTicket: (projectId: string, diagramId: string) =>
+    request<{ ticket: string }>(
+      `/api/v1/projects/${projectId}/diagrams/${diagramId}/ws-ticket`,
+      { method: "POST" }
+    ),
 }

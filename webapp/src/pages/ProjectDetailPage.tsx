@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { toast } from "react-toastify"
+import type { UMLDiagramType } from "@tumaet/apollon"
 import { Button } from "@tumaet/ui/components/button"
 import {
   AlertDialog,
@@ -22,7 +23,6 @@ import {
 import { ProjectGallerySkeleton } from "@/components/projects/ProjectGallerySkeleton"
 import { useModalContext } from "@/contexts"
 import { ProjectsApiClient } from "@/services/ExtensionApiClient"
-import { DiagramApiClient } from "@/services/DiagramApiClient"
 import type { Project } from "@/types"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { log } from "@/logger"
@@ -30,10 +30,10 @@ import { log } from "@/logger"
 const route = getRouteApi("/projects/$id")
 
 /**
- * A project's diagrams. Diagram rows come from `extension-backend`
- * (ownership only); each one's title/type/date is then resolved from
- * `diagrams-backend` — the same two-step resolution `DiagramGallery` already
- * uses for shared diagrams (see design.md in the `add-projects` change).
+ * A project's diagrams. `extension-backend` resolves each row's
+ * title/type/updatedAt from `diagrams-backend` server-side and returns them
+ * already enriched — the browser never learns a project diagram's
+ * `diagrams-backend` id (see gate-project-diagrams).
  */
 export const ProjectDetailPage = () => {
   const { id } = route.useParams()
@@ -63,27 +63,21 @@ export const ProjectDetailPage = () => {
   const loadDiagrams = async () => {
     try {
       const rows = await ProjectsApiClient.listDiagrams(id)
-      const resolved = await Promise.all(
-        rows.map(async (row): Promise<ResolvedProjectDiagram> => {
-          try {
-            const stored = await DiagramApiClient.fetchStoredDiagram(
-              row.redisId
-            )
-            if (!stored) {
-              return { id: row.redisId, diagramId: row.id, status: "failed" }
-            }
-            return {
-              id: row.redisId,
+      const resolved: ResolvedProjectDiagram[] = rows.map((row) =>
+        row.status === "ready" && row.title !== undefined && row.type
+          ? {
               diagramId: row.id,
+              projectId: row.projectId,
               status: "ready",
-              title: stored.title,
-              type: stored.type,
-              lastModifiedAt: stored.updatedAt || stored.createdAt,
+              title: row.title,
+              type: row.type as UMLDiagramType,
+              lastModifiedAt: row.updatedAt ?? "",
             }
-          } catch {
-            return { id: row.redisId, diagramId: row.id, status: "failed" }
-          }
-        })
+          : {
+              diagramId: row.id,
+              projectId: row.projectId,
+              status: "failed",
+            }
       )
       setDiagrams(resolved)
     } catch (err) {
@@ -213,7 +207,7 @@ export const ProjectDetailPage = () => {
           >
             {diagrams.map((diagram) => (
               <ProjectDiagramCard
-                key={diagram.id}
+                key={diagram.diagramId}
                 diagram={diagram}
                 onDelete={(d) => void handleDeleteDiagram(d)}
               />

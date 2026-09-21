@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query"
+import type { RepositoryKind } from "@/services/versionRepository"
 import type { ControlEvent } from "@/types"
 import { log } from "@/logger"
 import { versionKeys } from "./keys"
@@ -10,17 +11,19 @@ import {
 } from "./versionListCache"
 
 /**
- * WS control events → query-cache reconciliation (remote mode only). This is
- * the only place peer version activity touches the cache; the page keeps its
- * own `VERSION_RESTORED` branch for the editor-model refetch, which needs the
- * live editor instance.
+ * WS control events → query-cache reconciliation (collab modes only: any
+ * backend whose diagram has a live collaboration socket — today `remote` and
+ * `project`). This is the only place peer version activity touches the
+ * cache; the page keeps its own `VERSION_RESTORED` branch for the
+ * editor-model refetch, which needs the live editor instance.
  */
 export function applyControlEventToCache(
   queryClient: QueryClient,
+  kind: RepositoryKind,
   diagramId: string,
   event: ControlEvent
 ): void {
-  const listKey = versionKeys.list("remote", diagramId)
+  const listKey = versionKeys.list(kind, diagramId)
   switch (event.type) {
     case "VERSION_CREATED": {
       // Skip when the row is already cached — i.e. our own create's
@@ -37,7 +40,7 @@ export function applyControlEventToCache(
         removeVersionFromList(data, event.versionId)
       )
       queryClient.removeQueries({
-        queryKey: versionKeys.body("remote", diagramId, event.versionId),
+        queryKey: versionKeys.body(kind, diagramId, event.versionId),
       })
       // Leaving a preview of the deleted version is the page's job, not the
       // cache's: `?version=` is the source of truth, so clearing the store

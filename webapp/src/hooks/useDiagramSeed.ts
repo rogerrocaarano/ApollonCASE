@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { DiagramApiClient } from "@/services/DiagramApiClient"
+import type { DiagramContentClient } from "@/services/diagramGateway/types"
 import type { Diagram } from "@/types"
 
 interface SeedState {
@@ -36,7 +37,8 @@ interface SeedResult {
  */
 export function useDiagramSeed(
   diagramId: string | undefined,
-  enabled: boolean
+  enabled: boolean,
+  client: DiagramContentClient = DiagramApiClient
 ): SeedState {
   const [result, setResult] = useState<SeedResult | null>(null)
   const wanted = diagramId && enabled ? diagramId : undefined
@@ -45,7 +47,7 @@ export function useDiagramSeed(
     if (!wanted) return
 
     const abort = new AbortController()
-    DiagramApiClient.fetchDiagram(wanted, { signal: abort.signal })
+    client.fetchDiagram(wanted, { signal: abort.signal })
       .then((diagram) => {
         if (!abort.signal.aborted) setResult({ diagramId: wanted, diagram })
       })
@@ -54,7 +56,7 @@ export function useDiagramSeed(
       })
 
     return () => abort.abort()
-  }, [wanted])
+  }, [wanted, client])
 
   const settled = wanted !== undefined && result?.diagramId === wanted
   return {

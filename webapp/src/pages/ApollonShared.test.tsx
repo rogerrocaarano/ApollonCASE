@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, screen, waitFor } from "@testing-library/react"
 import { renderWithRouter } from "@/test/renderWithRouter"
 import { wrapWithQueryClient } from "@/test/queryTestUtils"
+import { ApollonSharedAtSharedRoute } from "@/test/ApollonSharedAtSharedRoute"
 import { toast } from "react-toastify"
-import { ApollonShared } from "./ApollonShared"
 import { EditorProvider, ModalProvider } from "@/contexts"
 import { DiagramApiClient } from "@/services/DiagramApiClient"
 
@@ -236,7 +236,7 @@ function mountAt(initialEntry: string) {
   // The page reads getRouteApi("/shared/$diagramId"), so it must mount under
   // that template; "/" is included so its navigate({ to: "/" }) fallback
   // resolves. Drive in-test route changes with the returned `history.push`.
-  return renderWithRouter(<ApollonShared />, {
+  return renderWithRouter(<ApollonSharedAtSharedRoute />, {
     initialEntry,
     routePaths: ["/shared/$diagramId", "/"],
     wrapper: (children) =>

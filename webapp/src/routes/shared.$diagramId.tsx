@@ -11,6 +11,20 @@ import { isDiagramView } from "@/utils/sharedDiagramLinks"
  */
 type SharedSearch = { view?: DiagramView; version?: string }
 
+function SharedDiagramRouteComponent() {
+  const { diagramId } = Route.useParams()
+  const { view, version } = Route.useSearch()
+  return (
+    <VersionRepositoryProvider kind="remote">
+      <ApollonShared
+        diagramId={diagramId}
+        viewType={view}
+        previewFromUrl={version}
+      />
+    </VersionRepositoryProvider>
+  )
+}
+
 export const Route = createFileRoute("/shared/$diagramId")({
   // Invalid `view` collapses to undefined; the page's missing-view guard then
   // toasts and redirects home.
@@ -20,9 +34,5 @@ export const Route = createFileRoute("/shared/$diagramId")({
   }),
   // The route is what makes this the remote backend, so it declares the kind
   // the version hooks resolve their adapter and cache keys from.
-  component: () => (
-    <VersionRepositoryProvider kind="remote">
-      <ApollonShared />
-    </VersionRepositoryProvider>
-  ),
+  component: SharedDiagramRouteComponent,
 })

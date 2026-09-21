@@ -1,19 +1,22 @@
 import { LocalVersionRepository } from "./LocalVersionRepository"
 import { RemoteVersionRepository } from "./RemoteVersionRepository"
+import { ProjectVersionRepository } from "./ProjectVersionRepository"
 import type { VersionRepository } from "./types"
 
 export type RepositoryKind = VersionRepository["kind"]
 
 /**
  * Adapter registry, keyed by backend kind. `kind` is a static property of the
- * editor route (`/local/*` is IndexedDB, `/shared/*` is REST), so consumers
- * read it from `VersionRepositoryProvider` and resolve the adapter here. That
- * keeps the kind — and therefore the version query keys — a pure function of
- * where the UI is mounted, with no ambient state to race a navigation.
+ * editor route (`/local/*` is IndexedDB, `/shared/*` is REST, a project
+ * diagram's route is `project`), so consumers read it from
+ * `VersionRepositoryProvider` and resolve the adapter here. That keeps the
+ * kind — and therefore the version query keys — a pure function of where the
+ * UI is mounted, with no ambient state to race a navigation.
  */
 const adapters: Record<RepositoryKind, VersionRepository> = {
   local: LocalVersionRepository,
   remote: RemoteVersionRepository,
+  project: ProjectVersionRepository,
 }
 
 export function getVersionRepository(kind: RepositoryKind): VersionRepository {
@@ -37,7 +40,12 @@ export function setVersionRepository(
   }
 }
 
-export { LocalVersionRepository, RemoteVersionRepository }
+export {
+  LocalVersionRepository,
+  RemoteVersionRepository,
+  ProjectVersionRepository,
+}
+export { toProjectVersionDiagramId } from "./ProjectVersionRepository"
 export { subscribeToLocalVersionEvents } from "./LocalVersionRepository"
 export type {
   VersionRepository,

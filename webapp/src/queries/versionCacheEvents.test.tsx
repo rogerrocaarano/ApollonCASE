@@ -72,7 +72,7 @@ describe("applyControlEventToCache", () => {
     )
     await waitFor(() => expect(rowIds(view)).toEqual(["existing"]))
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_CREATED",
       versionId: "brand-new",
       createdAt: "2026-04-30T10:00:00Z",
@@ -89,7 +89,7 @@ describe("applyControlEventToCache", () => {
     await waitFor(() => expect(rowIds(view)).toEqual(["a"]))
     expect(list).toHaveBeenCalledTimes(1)
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_CREATED",
       versionId: "a",
       createdAt: "2026-04-29T12:00:00Z",
@@ -108,7 +108,7 @@ describe("applyControlEventToCache", () => {
       nodes: [],
     })
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_DELETED",
       versionId: "a",
     })
@@ -124,7 +124,7 @@ describe("applyControlEventToCache", () => {
     const { client, view } = setup([summary("a", { name: "old" })])
     await waitFor(() => expect(rowIds(view)).toEqual(["a"]))
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_RENAMED",
       versionId: "a",
       name: "renamed",
@@ -145,7 +145,7 @@ describe("applyControlEventToCache", () => {
     )
     await waitFor(() => expect(rowIds(view)).toEqual(["a"]))
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_RESTORED",
       headRev: 5,
       updatedAt: "2026-05-08T12:00:00Z",
@@ -161,7 +161,7 @@ describe("applyControlEventToCache", () => {
     await waitFor(() => expect(rowIds(view)).toEqual(["a"]))
     const warn = vi.spyOn(log, "warn").mockImplementation(() => {})
 
-    applyControlEventToCache(client, DIAGRAM_ID, {
+    applyControlEventToCache(client, "remote", DIAGRAM_ID, {
       type: "VERSION_FROM_THE_FUTURE",
     } as unknown as ControlEvent)
 

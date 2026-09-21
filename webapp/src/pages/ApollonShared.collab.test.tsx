@@ -6,7 +6,7 @@ import { wrapWithQueryClient } from "@/test/queryTestUtils"
 import { stubVersionRepository } from "@/test/versionRepositoryStub"
 import { EditorProvider, ModalProvider } from "@/contexts"
 import { useVersionStore } from "@/stores/useVersionStore"
-import { ApollonShared } from "./ApollonShared"
+import { ApollonSharedAtSharedRoute } from "@/test/ApollonSharedAtSharedRoute"
 import type { ControlEvent, Diagram, VersionSummary } from "@/types"
 import type { UMLModel } from "@tumaet/apollon"
 
@@ -144,7 +144,7 @@ async function mountEditor({
   const search = previewVersion
     ? `?view=COLLABORATE&version=${previewVersion}`
     : "?view=COLLABORATE"
-  const view = renderWithRouter(<ApollonShared />, {
+  const view = renderWithRouter(<ApollonSharedAtSharedRoute />, {
     initialEntry: `/shared/${DIAGRAM_ID}${search}`,
     routePaths: ["/shared/$diagramId", "/"],
     wrapper: (children) =>

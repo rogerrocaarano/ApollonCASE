@@ -2,33 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { NewDiagramModal } from "./NewDiagramModal"
 
-const {
-  closeModalMock,
-  createDiagramMock,
-  linkDiagramMock,
-  navigateMock,
-  toastErrorMock,
-} = vi.hoisted(() => ({
-  closeModalMock: vi.fn(),
-  createDiagramMock: vi.fn(),
-  linkDiagramMock: vi.fn(),
-  navigateMock: vi.fn(),
-  toastErrorMock: vi.fn(),
-}))
+const { closeModalMock, createDiagramMock, navigateMock, toastErrorMock } =
+  vi.hoisted(() => ({
+    closeModalMock: vi.fn(),
+    createDiagramMock: vi.fn(),
+    navigateMock: vi.fn(),
+    toastErrorMock: vi.fn(),
+  }))
 
 vi.mock("@/contexts/ModalContext", () => ({
   useModalContext: () => ({ closeModal: closeModalMock }),
 }))
 
-vi.mock("@/services/DiagramApiClient", () => ({
-  DiagramApiClient: {
-    createDiagram: (...args: unknown[]) => createDiagramMock(...args),
-  },
-}))
-
 vi.mock("@/services/ExtensionApiClient", () => ({
   ProjectsApiClient: {
-    linkDiagram: (...args: unknown[]) => linkDiagramMock(...args),
+    createDiagram: (...args: unknown[]) => createDiagramMock(...args),
   },
 }))
 
@@ -46,39 +34,36 @@ describe("NewDiagramModal — project-scoped creation", () => {
   beforeEach(() => {
     closeModalMock.mockReset()
     createDiagramMock.mockReset()
-    linkDiagramMock.mockReset()
     navigateMock.mockReset()
     toastErrorMock.mockReset()
   })
 
-  it("creates the diagram in diagrams-backend, links it to the project, then opens the collaborative editor", async () => {
-    createDiagramMock.mockResolvedValue({ id: "d1" })
-    linkDiagramMock.mockResolvedValue({ id: "link1", redisId: "d1" })
+  it("creates the diagram through extension-backend, then opens the project-diagram editor", async () => {
+    createDiagramMock.mockResolvedValue({
+      id: "d1",
+      projectId: "p1",
+      status: "ready",
+    })
 
     render(<NewDiagramModal projectId="p1" />)
     fireEvent.click(screen.getByRole("button", { name: "Create Diagram" }))
 
     await waitFor(() => {
       expect(createDiagramMock).toHaveBeenCalledTimes(1)
-      expect(linkDiagramMock).toHaveBeenCalledWith("p1", "d1")
-      expect(navigateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "/shared/$diagramId",
-          params: { diagramId: "d1" },
-        })
+      expect(createDiagramMock).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ type: "ClassDiagram" })
       )
+      expect(navigateMock).toHaveBeenCalledWith({
+        to: "/projects/$projectId/diagrams/$diagramId",
+        params: { projectId: "p1", diagramId: "d1" },
+      })
       expect(closeModalMock).toHaveBeenCalled()
     })
-
-    // Link must happen after create, not before/concurrently.
-    const createOrder = createDiagramMock.mock.invocationCallOrder[0]
-    const linkOrder = linkDiagramMock.mock.invocationCallOrder[0]
-    expect(createOrder).toBeLessThan(linkOrder)
   })
 
-  it("does not navigate and surfaces a toast when linking the created diagram fails", async () => {
-    createDiagramMock.mockResolvedValue({ id: "d1" })
-    linkDiagramMock.mockRejectedValue(new Error("network error"))
+  it("does not navigate and surfaces a toast when creation fails", async () => {
+    createDiagramMock.mockRejectedValue(new Error("network error"))
 
     render(<NewDiagramModal projectId="p1" />)
     fireEvent.click(screen.getByRole("button", { name: "Create Diagram" }))
@@ -100,6 +85,5 @@ describe("NewDiagramModal — project-scoped creation", () => {
       )
     })
     expect(createDiagramMock).not.toHaveBeenCalled()
-    expect(linkDiagramMock).not.toHaveBeenCalled()
   })
 })

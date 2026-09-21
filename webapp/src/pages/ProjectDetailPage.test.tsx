@@ -6,7 +6,6 @@ import { ProjectDetailPage } from "./ProjectDetailPage"
 const {
   getMock,
   listDiagramsMock,
-  fetchStoredDiagramMock,
   openModalMock,
   deleteProjectMock,
   deleteDiagramMock,
@@ -15,7 +14,6 @@ const {
 } = vi.hoisted(() => ({
   getMock: vi.fn(),
   listDiagramsMock: vi.fn(),
-  fetchStoredDiagramMock: vi.fn(),
   openModalMock: vi.fn(),
   deleteProjectMock: vi.fn(),
   deleteDiagramMock: vi.fn(),
@@ -33,13 +31,6 @@ vi.mock("@/services/ExtensionApiClient", () => ({
     listDiagrams: (...args: unknown[]) => listDiagramsMock(...args),
     deleteProject: (...args: unknown[]) => deleteProjectMock(...args),
     deleteDiagram: (...args: unknown[]) => deleteDiagramMock(...args),
-  },
-}))
-
-vi.mock("@/services/DiagramApiClient", () => ({
-  DiagramApiClient: {
-    fetchStoredDiagram: (...args: unknown[]) =>
-      fetchStoredDiagramMock(...args),
   },
 }))
 
@@ -62,17 +53,27 @@ const project = {
   updatedAt: "now",
 }
 
+const readyDiagram = {
+  id: "d1",
+  projectId: "p1",
+  status: "ready" as const,
+  title: "My Diagram",
+  type: "ClassDiagram",
+  updatedAt: "2026-01-02T00:00:00.000Z",
+}
+
 const renderPage = () =>
   renderWithRouter(<ProjectDetailPage />, {
     initialEntry: "/projects/p1",
-    routePaths: ["/projects/$id"],
+    // Registered so <ProjectDiagramCard>'s <Link to="/projects/.../diagrams/...">
+    // resolves — it doesn't need to actually render anything here.
+    routePaths: ["/projects/$id", "/projects/$projectId/diagrams/$diagramId"],
   })
 
 describe("ProjectDetailPage", () => {
   beforeEach(() => {
     getMock.mockReset()
     listDiagramsMock.mockReset()
-    fetchStoredDiagramMock.mockReset()
     openModalMock.mockReset()
     deleteProjectMock.mockReset()
     deleteDiagramMock.mockReset()
@@ -81,21 +82,8 @@ describe("ProjectDetailPage", () => {
     getMock.mockResolvedValue(project)
   })
 
-  it("renders the project's diagrams once resolved", async () => {
-    listDiagramsMock.mockResolvedValue([
-      { id: "d1", redisId: "redis-1", projectId: "p1" },
-    ])
-    fetchStoredDiagramMock.mockResolvedValue({
-      id: "redis-1",
-      type: "ClassDiagram",
-      title: "My Diagram",
-      nodes: [],
-      edges: [],
-      assessments: {},
-      version: "4.0.0",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
-    })
+  it("renders the project's diagrams once resolved, with enriched metadata from extension-backend", async () => {
+    listDiagramsMock.mockResolvedValue([readyDiagram])
 
     renderPage()
 
@@ -103,11 +91,10 @@ describe("ProjectDetailPage", () => {
     await screen.findByText("My Diagram")
   })
 
-  it("shows a failure state for a diagram that fails to resolve", async () => {
+  it("shows a failure state for a diagram extension-backend could not resolve", async () => {
     listDiagramsMock.mockResolvedValue([
-      { id: "d1", redisId: "redis-1", projectId: "p1" },
+      { id: "d1", projectId: "p1", status: "failed" },
     ])
-    fetchStoredDiagramMock.mockRejectedValue(new Error("network error"))
 
     renderPage()
 
@@ -167,20 +154,7 @@ describe("ProjectDetailPage", () => {
   })
 
   it("deletes a diagram after confirmation and removes it from the list", async () => {
-    listDiagramsMock.mockResolvedValue([
-      { id: "d1", redisId: "redis-1", projectId: "p1" },
-    ])
-    fetchStoredDiagramMock.mockResolvedValue({
-      id: "redis-1",
-      type: "ClassDiagram",
-      title: "My Diagram",
-      nodes: [],
-      edges: [],
-      assessments: {},
-      version: "4.0.0",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
-    })
+    listDiagramsMock.mockResolvedValue([readyDiagram])
     deleteDiagramMock.mockResolvedValue(undefined)
 
     renderPage()
@@ -199,20 +173,7 @@ describe("ProjectDetailPage", () => {
   })
 
   it("surfaces a toast and keeps the diagram when deleting it fails", async () => {
-    listDiagramsMock.mockResolvedValue([
-      { id: "d1", redisId: "redis-1", projectId: "p1" },
-    ])
-    fetchStoredDiagramMock.mockResolvedValue({
-      id: "redis-1",
-      type: "ClassDiagram",
-      title: "My Diagram",
-      nodes: [],
-      edges: [],
-      assessments: {},
-      version: "4.0.0",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
-    })
+    listDiagramsMock.mockResolvedValue([readyDiagram])
     deleteDiagramMock.mockRejectedValue(new Error("network error"))
 
     renderPage()

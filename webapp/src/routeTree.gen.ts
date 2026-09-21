@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from "./routes/index"
 import { Route as SharedDiagramIdRouteImport } from "./routes/shared.$diagramId"
 import { Route as ProjectsIdRouteImport } from "./routes/projects.$id"
 import { Route as LocalIdRouteImport } from "./routes/local.$id"
+import { Route as ProjectsProjectIdDiagramsDiagramIdRouteImport } from "./routes/projects.$projectId.diagrams.$diagramId"
 
 const PrivacyRoute = PrivacyRouteImport.update({
   id: "/privacy",
@@ -58,6 +59,12 @@ const LocalIdRoute = LocalIdRouteImport.update({
   path: "/local/$id",
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdDiagramsDiagramIdRoute =
+  ProjectsProjectIdDiagramsDiagramIdRouteImport.update({
+    id: "/projects/$projectId/diagrams/$diagramId",
+    path: "/projects/$projectId/diagrams/$diagramId",
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   "/local/$id": typeof LocalIdRoute
   "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
+  "/projects/$projectId/diagrams/$diagramId": typeof ProjectsProjectIdDiagramsDiagramIdRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
@@ -78,6 +86,7 @@ export interface FileRoutesByTo {
   "/local/$id": typeof LocalIdRoute
   "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
+  "/projects/$projectId/diagrams/$diagramId": typeof ProjectsProjectIdDiagramsDiagramIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +98,7 @@ export interface FileRoutesById {
   "/local/$id": typeof LocalIdRoute
   "/projects/$id": typeof ProjectsIdRoute
   "/shared/$diagramId": typeof SharedDiagramIdRoute
+  "/projects/$projectId/diagrams/$diagramId": typeof ProjectsProjectIdDiagramsDiagramIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +111,7 @@ export interface FileRouteTypes {
     | "/local/$id"
     | "/projects/$id"
     | "/shared/$diagramId"
+    | "/projects/$projectId/diagrams/$diagramId"
   fileRoutesByTo: FileRoutesByTo
   to:
     | "/"
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | "/local/$id"
     | "/projects/$id"
     | "/shared/$diagramId"
+    | "/projects/$projectId/diagrams/$diagramId"
   id:
     | "__root__"
     | "/"
@@ -121,6 +133,7 @@ export interface FileRouteTypes {
     | "/local/$id"
     | "/projects/$id"
     | "/shared/$diagramId"
+    | "/projects/$projectId/diagrams/$diagramId"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +145,7 @@ export interface RootRouteChildren {
   LocalIdRoute: typeof LocalIdRoute
   ProjectsIdRoute: typeof ProjectsIdRoute
   SharedDiagramIdRoute: typeof SharedDiagramIdRoute
+  ProjectsProjectIdDiagramsDiagramIdRoute: typeof ProjectsProjectIdDiagramsDiagramIdRoute
 }
 
 declare module "@tanstack/react-router" {
@@ -192,6 +206,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LocalIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/projects/$projectId/diagrams/$diagramId": {
+      id: "/projects/$projectId/diagrams/$diagramId"
+      path: "/projects/$projectId/diagrams/$diagramId"
+      fullPath: "/projects/$projectId/diagrams/$diagramId"
+      preLoaderRoute: typeof ProjectsProjectIdDiagramsDiagramIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +225,8 @@ const rootRouteChildren: RootRouteChildren = {
   LocalIdRoute: LocalIdRoute,
   ProjectsIdRoute: ProjectsIdRoute,
   SharedDiagramIdRoute: SharedDiagramIdRoute,
+  ProjectsProjectIdDiagramsDiagramIdRoute:
+    ProjectsProjectIdDiagramsDiagramIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

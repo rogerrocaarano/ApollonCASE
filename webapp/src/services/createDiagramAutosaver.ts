@@ -1,5 +1,6 @@
 import type { UMLModel } from "@tumaet/apollon"
 import { ApiError, DiagramApiClient } from "@/services/DiagramApiClient"
+import type { DiagramContentClient } from "@/services/diagramGateway/types"
 import { log } from "@/logger"
 
 interface AutosaverOptions {
@@ -8,6 +9,8 @@ interface AutosaverOptions {
   getModel: () => UMLModel | undefined
   /** True while a version preview overlays the canvas — saving is paused. */
   isPaused: () => boolean
+  /** Where the save actually goes. Defaults to `DiagramApiClient` (diagrams-backend directly). */
+  client?: DiagramContentClient
   /**
    * Collaboration peers all autosave the same Yjs-converged model, so HEAD
    * revision contention isn't a real conflict. When enabled, a
@@ -49,6 +52,7 @@ export function createDiagramAutosaver(
   const debounceMs = opts.debounceMs ?? 1500
   const maxWaitMs = opts.maxWaitMs ?? 5000
   const maxRebaseRetries = opts.maxRebaseRetries ?? 3
+  const client = opts.client ?? DiagramApiClient
 
   let dirty = false
   // Stops arming new debounce/maxWait timers. A save already chained behind an
@@ -81,11 +85,9 @@ export function createDiagramAutosaver(
     let ifMatch = lastHeadRev
     for (;;) {
       try {
-        const res = await DiagramApiClient.sendDiagramUpdate(
-          opts.diagramId,
-          model,
-          { ifMatch }
-        )
+        const res = await client.sendDiagramUpdate(opts.diagramId, model, {
+          ifMatch,
+        })
         lastHeadRev = res.headRev
         return true
       } catch (err) {
@@ -104,7 +106,7 @@ export function createDiagramAutosaver(
           if (typeof meta?.currentHeadRev === "number") {
             ifMatch = meta.currentHeadRev
           } else {
-            const head = await DiagramApiClient.fetchDiagram(opts.diagramId)
+            const head = await client.fetchDiagram(opts.diagramId)
             ifMatch = (head as { headRev?: number }).headRev
           }
           lastHeadRev = ifMatch

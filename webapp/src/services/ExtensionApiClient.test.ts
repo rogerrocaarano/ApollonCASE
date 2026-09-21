@@ -140,17 +140,40 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
     expect(init.method).toBe("GET")
   })
 
-  it("linkDiagram() sends a POST with the redisId", async () => {
+  it("createDiagram() sends a POST with the model, no redisId in the response", async () => {
     fetchMock.mockResolvedValueOnce(
-      jsonResponse({ id: "d1", redisId: "r1", projectId: "p1" })
+      jsonResponse({ id: "d1", projectId: "p1", status: "ready" })
     )
 
-    await ProjectsApiClient.linkDiagram("p1", "r1")
+    const model = {
+      id: "local-id",
+      type: "ClassDiagram",
+      version: "4.0.0",
+      title: "New",
+      nodes: [],
+      edges: [],
+      assessments: {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+
+    const result = await ProjectsApiClient.createDiagram("p1", model)
 
     const [url, init] = fetchMock.mock.calls[0]
     expect(pathOf(url)).toBe("/api/v1/projects/p1/diagrams")
     expect(init.method).toBe("POST")
-    expect(JSON.parse(init.body)).toEqual({ redisId: "r1" })
+    expect(JSON.parse(init.body)).toEqual({ model })
+    expect(result).not.toHaveProperty("redisId")
+  })
+
+  it("issueWsTicket() sends a POST to the diagram's ws-ticket endpoint", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ticket: "tkt-1" }))
+
+    const result = await ProjectsApiClient.issueWsTicket("p1", "d1")
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(pathOf(url)).toBe("/api/v1/projects/p1/diagrams/d1/ws-ticket")
+    expect(init.method).toBe("POST")
+    expect(result).toEqual({ ticket: "tkt-1" })
   })
 
   it("deleteProject() sends a DELETE to the project id", async () => {
