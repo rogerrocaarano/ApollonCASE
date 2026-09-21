@@ -5,6 +5,8 @@ import type { Project, ProjectDiagram } from "@/types"
 export interface CurrentUser {
   id: string
   keycloakId: string
+  displayName: string | null
+  email: string | null
 }
 
 interface RequestOpts {
@@ -34,6 +36,9 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
 
 export const ExtensionApiClient = {
   me: () => request<CurrentUser>("/api/v1/me"),
+
+  updateMe: (input: { displayName?: string; email?: string }) =>
+    request<CurrentUser>("/api/v1/me", { method: "PATCH", body: input }),
 }
 
 export const ProjectsApiClient = {

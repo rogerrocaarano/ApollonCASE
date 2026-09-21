@@ -40,6 +40,25 @@ describe("ExtensionApiClient / ProjectsApiClient", () => {
     expect(init.headers.Authorization).toBe("Bearer test-token")
   })
 
+  it("updateMe() sends a PATCH with a JSON body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        id: "u1",
+        keycloakId: "kc-1",
+        displayName: "Ada Lovelace",
+        email: null,
+      })
+    )
+
+    await ExtensionApiClient.updateMe({ displayName: "Ada Lovelace" })
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(pathOf(url)).toBe("/api/v1/me")
+    expect(init.method).toBe("PATCH")
+    expect(init.headers["Content-Type"]).toBe("application/json")
+    expect(JSON.parse(init.body)).toEqual({ displayName: "Ada Lovelace" })
+  })
+
   it("list() sends a GET to /api/v1/projects", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([]))
 
