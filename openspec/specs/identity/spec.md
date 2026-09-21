@@ -27,6 +27,10 @@ La webapp SHALL permitir cerrar sesión, terminando tanto la sesión local como 
 - **THEN** su sesión de Keycloak se termina
 - **AND** peticiones posteriores de la webapp hacia `extension-backend` dejan de incluir un token válido
 
+#### Scenario: El control de cierre de sesión está disponible en toda vista autenticada
+- **WHEN** un usuario autenticado está en cualquier vista de la webapp que requiere sesión — incluidas la lista de proyectos, el detalle de un proyecto, y el editor
+- **THEN** esa vista ofrece un control alcanzable para cerrar sesión
+
 ### Requirement: Renovación de sesión sin interrupción
 Mientras la sesión de Keycloak del usuario siga viva, la webapp SHALL renovar el access token en segundo plano antes de que expire, sin interrumpir al usuario ni forzar una recarga de página.
 
@@ -79,63 +83,38 @@ Al recibir una petición autenticada, `extension-backend` SHALL registrar o recu
 - **WHEN** una petición sin token llega a `GET /api/v1/me`
 - **THEN** `extension-backend` responde 401
 
-### Requirement: Gestión del perfil propio
-`extension-backend` SHALL let an authenticated user view their own profile: a display name and an email address. `displayName` SHALL start empty for a newly created `User` and stay empty until the user sets it — it is never inferred from the Keycloak token. `email` SHALL always reflect the `email` claim of the user's current Keycloak token, synced on every authenticated request; it is system-managed and not a value the user sets independently of their token.
+### Requirement: extension-backend sincroniza el email del usuario desde el token
+`extension-backend` SHALL keep each `User`'s `email` synced with the `email` claim of their current Keycloak token, updated on every authenticated request. `email` is system-managed: it is derived entirely from the token and is never a value the user sets independently of it. `extension-backend` does not store or serve any other user-editable profile field — a user's display name is not part of this `User` record (see the collaboration-identity requirement below).
 
-#### Scenario: Nuevo usuario tiene displayName vacío y email desde el token
+#### Scenario: Nuevo usuario obtiene su email del token
 - **WHEN** un usuario se autentica con `extension-backend` por primera vez
 - **THEN** su `User` se crea con `email` igual al claim `email` de su token de Keycloak
-- **AND** su `displayName` queda vacío
-
-#### Scenario: Usuario actualiza su nombre para mostrar
-- **WHEN** un usuario autenticado envía un `displayName` no vacío
-- **THEN** su perfil queda con ese `displayName`
-- **AND** su `email` no se ve afectado por esta petición
 
 #### Scenario: El email se mantiene sincronizado con el token
 - **WHEN** el claim `email` del token de Keycloak de un usuario autenticado difiere del `email` almacenado
 - **THEN** esa petición autenticada actualiza el `email` almacenado para que coincida con el token
-- **AND** esto ocurre automáticamente, sin que el usuario envíe un email en el body de la petición
+- **AND** esto ocurre automáticamente, sin que el usuario envíe un email en el body de ninguna petición
 
-#### Scenario: El perfil ya no acepta un email enviado manualmente
-- **WHEN** un usuario autenticado incluye un campo `email` en una petición de actualización de perfil
-- **THEN** ese campo se ignora o la petición lo rechaza
-- **AND** el `email` almacenado sigue siendo el que provino del token de Keycloak, sin validarse contra lo enviado
+### Requirement: La identidad de colaboración se deriva del token de Keycloak
+Al entrar a una sesión de diagrama colaborativa, la webapp SHALL identificar al usuario ante otros participantes (nombre y color de cursor) derivando su nombre directamente de los claims `given_name` y `family_name` de su token de Keycloak vigente, concatenados. La webapp SHALL NOT pedir un nombre por sesión, SHALL NOT almacenar ese nombre, y SHALL NOT bloquear la entrada a la sesión colaborativa a la espera de que el usuario complete un perfil.
 
-#### Scenario: El perfil actualizado se refleja en la identidad expuesta
-- **WHEN** un usuario autenticado que ya tiene `displayName` configurado consulta `GET /api/v1/me`
-- **THEN** la respuesta incluye ese `displayName`
-- **AND** incluye el `email` sincronizado desde su token de Keycloak
+#### Scenario: Usuario entra a colaborar inmediatamente
+- **WHEN** un usuario autenticado abre un diagrama en modo colaborativo
+- **THEN** entra directamente a la sesión colaborativa, sin ningún aviso o modal previo
+- **AND** otros participantes lo ven identificado con el nombre derivado de `given_name` y `family_name` de su token
 
-### Requirement: La identidad de colaboración proviene del perfil del usuario
-Al entrar a una sesión de diagrama colaborativa, la webapp SHALL identificar al usuario ante otros participantes (nombre y color de cursor) usando el `displayName` de su propio perfil, sin pedirle un nombre por sesión. Si el usuario no tiene `displayName` configurado, la webapp SHALL requerírselo antes de continuar, en vez de generarle uno o dejarlo sin identificar.
+#### Scenario: El nombre de colaboración refleja el token vigente
+- **WHEN** el `given_name` o `family_name` del token de Keycloak de un usuario cambia entre dos sesiones colaborativas
+- **THEN** en la sesión nueva ese usuario aparece identificado con el nombre actualizado, sin acción adicional de su parte
 
-#### Scenario: Usuario con nombre configurado entra a colaborar
-- **WHEN** un usuario autenticado con `displayName` ya configurado abre un diagrama en modo colaborativo
-- **THEN** entra directamente a la sesión colaborativa
-- **AND** otros participantes lo ven identificado con ese `displayName`
+### Requirement: Webapp does not let a user edit their own identity
+Since a user's `email` and display name are both derived entirely from their Keycloak token, the webapp SHALL NOT present any editable field for either, and SHALL NOT submit either value to `extension-backend` when identifying the user. The webapp MAY display the current email and the computed display name as read-only information.
 
-#### Scenario: Usuario sin nombre configurado debe completarlo antes de entrar
-- **WHEN** un usuario autenticado sin `displayName` configurado abre un diagrama en modo colaborativo
-- **THEN** la webapp le pide configurar un nombre para mostrar antes de continuar
-- **AND** no puede confirmar sin proporcionar un nombre no vacío
+#### Scenario: No hay pantalla de edición de perfil
+- **WHEN** an authenticated user looks for a way to change their display name or email within the webapp
+- **THEN** the webapp offers no such editable control
 
-#### Scenario: Usuario completa su nombre y continúa
-- **WHEN** un usuario sin `displayName` configurado, al que se le pidió completarlo, guarda un nombre no vacío
-- **THEN** entra a la sesión colaborativa identificado con ese nombre
-
-#### Scenario: Usuario cierra el aviso sin completar su nombre
-- **WHEN** un usuario sin `displayName` configurado cierra el aviso sin guardar un nombre
-- **THEN** no entra a la sesión colaborativa
-
-### Requirement: Webapp does not let a user edit their own email
-Since `email` is system-managed and synced from the user's Keycloak token, the webapp SHALL NOT present an editable email field or submit an email value when updating the user's own profile. The webapp MAY display the current email as read-only information.
-
-#### Scenario: Profile editor has no editable email field
-- **WHEN** an authenticated user opens their profile editor
-- **THEN** the webapp does not show an input the user can type into to change their email
-- **AND** saving the profile does not send an email value to the server
-
-#### Scenario: Email shown reflects the current token
-- **WHEN** an authenticated user opens their profile editor
-- **THEN** any email shown matches the `email` claim of their current session
+#### Scenario: El nombre y el email mostrados reflejan la sesión vigente
+- **WHEN** an authenticated user views their own account information
+- **THEN** the display name shown matches `given_name` + `family_name` from their current Keycloak token
+- **AND** the email shown matches the `email` claim of that same token
