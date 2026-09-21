@@ -38,7 +38,7 @@ export const HomePage = () => {
   const chrome = useHomeChrome()
 
   const openNewDiagram = () =>
-    openModal("NEW_DIAGRAM", { dialogVariant: "home" })
+    openModal("NEW_CLASS_DIAGRAM", { dialogVariant: "home" })
   const triggerJsonImport = () => jsonImportRef.current?.click()
 
   const handleJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {

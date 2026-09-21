@@ -95,7 +95,7 @@ export const ProjectDetailPage = () => {
   }, [id])
 
   const handleNewDiagram = () => {
-    openModal("NEW_DIAGRAM", { projectId: id })
+    openModal("NEW_CLASS_DIAGRAM", { projectId: id })
   }
 
   const handleRename = () => {

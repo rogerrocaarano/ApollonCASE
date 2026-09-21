@@ -1,4 +1,5 @@
 export * from "./NewDiagramModal"
+export * from "./NewClassDiagramModal"
 export * from "./NewProjectModal"
 export * from "./RenameProjectModal"
 export * from "./ShareProjectModal"

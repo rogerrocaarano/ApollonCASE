@@ -140,7 +140,7 @@ describe("ProjectDetailPage", () => {
     button.click()
 
     await waitFor(() => {
-      expect(openModalMock).toHaveBeenCalledWith("NEW_DIAGRAM", {
+      expect(openModalMock).toHaveBeenCalledWith("NEW_CLASS_DIAGRAM", {
         projectId: "p1",
       })
     })
