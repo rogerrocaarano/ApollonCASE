@@ -18,6 +18,18 @@ COPY library ./library
 COPY packages/ui ./packages/ui
 COPY webapp ./webapp
 
+# Vite inlines any VITE_-prefixed process env var into the built bundle at
+# `vite build` time (see webapp/src/constants/urls.ts, auth.ts) - unlike
+# LEGAL_PROFILE below, these can't be changed at container runtime, only by
+# rebuilding the image. All optional: an unset one just keeps that source
+# file's own `|| ""` fallback.
+ARG VITE_KEYCLOAK_AUTHORITY
+ARG VITE_KEYCLOAK_CLIENT_ID
+ARG VITE_EXTENSION_SERVER_URL
+ENV VITE_KEYCLOAK_AUTHORITY=${VITE_KEYCLOAK_AUTHORITY} \
+    VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID} \
+    VITE_EXTENSION_SERVER_URL=${VITE_EXTENSION_SERVER_URL}
+
 # The webapp's `tsc -b` resolves `@tumaet/apollon` via the workspace link in
 # node_modules, which requires the library's compiled .d.ts in dist/.
 RUN npm run build --workspace=@tumaet/apollon \

@@ -1,6 +1,12 @@
 spring.datasource.url=jdbc:postgresql://host:port/db
 spring.datasource.username=user
 spring.datasource.password=password
+# Convenient for local dev, but not a reviewed production migration strategy
+# (no rollback, no audit trail) - containerize-production-stack carries this
+# same setting into the production compose (SPRING_JPA_HIBERNATE_DDL_AUTO)
+# as-is rather than deciding on Flyway/Liquibase, which is out of that
+# change's scope. Treat this as a known gap, not a deliberate choice, until a
+# future change addresses schema migrations properly.
 spring.jpa.hibernate.ddl-auto=update
 
 spring.security.oauth2.resourceserver.jwt.issuer-uri=http://<keycloak-host>:9000/realms/ApollonCASE
