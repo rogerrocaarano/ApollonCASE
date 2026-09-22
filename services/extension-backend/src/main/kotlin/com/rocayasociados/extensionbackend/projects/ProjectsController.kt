@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
@@ -274,6 +276,31 @@ class ProjectsController(
         @AuthenticationPrincipal jwt: Jwt,
     ) {
         projectsService.deleteDiagramVersion(projectId, diagramId, versionId, jwt.requiredSubject)
+    }
+
+    @Operation(
+        summary = "Genera un proyecto Spring Boot (entidades JPA y repositorios) a partir de un diagrama de clases",
+        description = "Solo entidades y repositorios en esta iteracion (sin servicios, controllers, DTOs ni OpenAPI). " +
+            "Requiere el mismo permiso que leer el cuerpo del diagrama (VIEWER o superior en el proyecto).",
+        responses = [
+            ApiResponse(responseCode = "400", description = "El diagrama no es un Class Diagram"),
+            ApiResponse(
+                responseCode = "422",
+                description = "El diagrama tiene atributos, metodos o multiplicidades que no se pudieron generar"
+            ),
+        ]
+    )
+    @GetMapping("/{projectId}/diagrams/{diagramId}/generate")
+    fun generateEntitiesAndRepositoriesZip(
+        @Parameter(description = "Id del proyecto") @PathVariable projectId: UUID,
+        @Parameter(description = "Id del diagrama") @PathVariable diagramId: UUID,
+        @AuthenticationPrincipal jwt: Jwt,
+    ): ResponseEntity<ByteArray> {
+        val zip = projectsService.generateEntitiesAndRepositoriesZip(projectId, diagramId, jwt.requiredSubject)
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"generated-project.zip\"")
+            .contentType(MediaType.valueOf("application/zip"))
+            .body(zip)
     }
 
     @Operation(

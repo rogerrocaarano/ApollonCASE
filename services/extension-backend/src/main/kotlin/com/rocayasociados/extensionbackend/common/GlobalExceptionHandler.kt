@@ -1,5 +1,8 @@
 package com.rocayasociados.extensionbackend.common
 
+import com.rocayasociados.extensionbackend.codegen.CodeGenerationValidationException
+import com.rocayasociados.extensionbackend.codegen.GenerationError
+import com.rocayasociados.extensionbackend.codegen.UnsupportedDiagramTypeException
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -30,4 +33,13 @@ class GlobalExceptionHandler {
         ex.responseHeaders?.contentType?.let { headers.contentType = it }
         return ResponseEntity.status(ex.statusCode).headers(headers).body(ex.responseBodyAsByteArray)
     }
+
+    /** A diagram whose attributes/methods/multiplicities couldn't be generated - see specs/code-generation/spec.md. */
+    @ExceptionHandler(CodeGenerationValidationException::class)
+    fun handleCodeGenerationValidation(ex: CodeGenerationValidationException): ResponseEntity<List<GenerationError>> =
+        ResponseEntity.unprocessableEntity().body(ex.errors)
+
+    /** Generation was requested for a diagram that isn't a Class Diagram. */
+    @ExceptionHandler(UnsupportedDiagramTypeException::class)
+    fun handleUnsupportedDiagramType(): ResponseEntity<Void> = ResponseEntity.badRequest().build()
 }

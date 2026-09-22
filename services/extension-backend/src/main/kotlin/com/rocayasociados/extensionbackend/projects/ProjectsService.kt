@@ -1,5 +1,6 @@
 package com.rocayasociados.extensionbackend.projects
 
+import com.rocayasociados.extensionbackend.codegen.CodeGenerationService
 import com.rocayasociados.extensionbackend.users.User
 import com.rocayasociados.extensionbackend.users.UsersRepository
 import org.springframework.data.repository.findByIdOrNull
@@ -21,6 +22,7 @@ class ProjectsService(
     private val diagramsRepository: DiagramsRepository,
     private val diagramsBackendClient: DiagramsBackendClient,
     private val wsTicketService: WsTicketService,
+    private val codeGenerationService: CodeGenerationService,
 ) {
     fun getProject(projectId: UUID, requesterKeycloakId: String): ProjectAccess {
         val permission = requirePermissionRow(projectId, requesterKeycloakId, ProjectPermissionType.VIEWER)
@@ -115,6 +117,18 @@ class ProjectsService(
     fun getDiagramBody(projectId: UUID, diagramId: UUID, requesterKeycloakId: String): Map<String, Any?> {
         val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.VIEWER)
         return diagramsBackendClient.getDiagram(diagram.redisId)
+    }
+
+    /**
+     * Generates a downloadable ZIP (JPA entities + Spring Data repositories
+     * only, see codegen.CodeGenerationService) from a project diagram's
+     * current body. Requires the same permission as [getDiagramBody], since
+     * generation only reads the diagram - it never changes it.
+     */
+    fun generateEntitiesAndRepositoriesZip(projectId: UUID, diagramId: UUID, requesterKeycloakId: String): ByteArray {
+        val diagram = requireDiagramPermission(projectId, diagramId, requesterKeycloakId, ProjectPermissionType.VIEWER)
+        val body = diagramsBackendClient.getDiagram(diagram.redisId)
+        return codeGenerationService.generateEntitiesAndRepositoriesZip(body)
     }
 
     /** Saves a project diagram's body to `diagrams-backend`. */
