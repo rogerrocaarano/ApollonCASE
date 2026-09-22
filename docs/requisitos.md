@@ -2,7 +2,7 @@
 
 ## 1. Introducción
 
-ApollonCASE es una herramienta CASE para modelar sistemas de software con diagramas UML y generar a partir de ellos artefactos de implementación. Este documento recoge los requisitos del sistema en fase de análisis: describe qué debe hacer, sin prescribir cómo se diseña o despliega. El estado de cumplimiento de cada requisito se cubrirá en un anexo.
+ApollonCASE es una herramienta CASE colaborativa para modelar sistemas de software con diagramas UML y generar a partir de ellos artefactos de implementación. Cubre el modelado de datos en su totalidad: modelo conceptual (diagramas de clases), modelo lógico normalizado y modelo físico en PostgreSQL.
 
 **Convenciones**
 
@@ -15,19 +15,24 @@ ApollonCASE es una herramienta CASE para modelar sistemas de software con diagra
 
 | ID | Categoría | Nombre del requisito | Prioridad |
 | --- | --- | --- | --- |
-| RF001 | Modelos UML | Edición de diagramas de clase UML (y demás tipos de diagrama soportados por el editor) | Crítico |
-| RF002 | Modelos UML | Gestión de proyectos como contenedor de diagramas (crear, renombrar, archivar, eliminar) | Importante |
-| RF003 | Modelos UML | Creación y modificación de diagramas mediante lenguaje natural (texto y voz) con revisión y confirmación previa *(por definir)* | Importante |
-| RF004 | Modelos UML | Importación de modelos UML desde Enterprise Architect *(por definir)* | Secundario |
-| RF005 | Generación de artefactos | Generación de un proyecto Spring Boot (entidades JPA, repositorios, migraciones, configuración) a partir de diagramas de clase | Crítico |
-| RF006 | Generación de artefactos | Generación de una API REST (servicios, controladores, DTOs, validaciones) con documentación OpenAPI | Crítico |
-| RF007 | Colaboración | Edición colaborativa de diagramas en tiempo real | Importante |
-| RF008 | Colaboración | Gestión de permisos por usuario y por proyecto (propietario, colaborador, lector), con herencia a los diagramas, invitaciones y revocación | Importante |
-| RF009 | Colaboración | Almacenamiento y versionado de diagramas | Secundario |
-| RF010 | Adicionales | Auditoría e historial de cambios por usuario y por proyecto *(por confirmar)* | Secundario |
-| RF011 | Adicionales | Exportación de un proyecto completo en ZIP, con diagramas y código generado *(por confirmar)* | Secundario |
-| RF012 | Adicionales | Plantillas de proyecto *(por confirmar)* | Secundario |
-| RF013 | Adicionales | Roles a nivel de organización o equipo *(por confirmar)* | Secundario |
+| RF001 | Modelado de datos | Modelado conceptual mediante diagramas de clases UML (y demás tipos de diagrama soportados por el editor) | Crítico |
+| RF002 | Modelado de datos | Derivación del modelo lógico (tablas, claves y relaciones) a partir del modelo conceptual | Crítico |
+| RF003 | Modelado de datos | Normalización del modelo lógico: detección de incumplimientos de las formas normales y propuesta o aplicación de la corrección | Importante |
+| RF004 | Modelado de datos | Gestión de proyectos como contenedor de diagramas (crear, renombrar, archivar, eliminar) | Importante |
+| RF005 | Modelado de datos | Creación y modificación de diagramas mediante lenguaje natural (texto y voz) con revisión y confirmación previa *(por definir)* | Importante |
+| RF006 | Interoperabilidad | Importación de modelos y diagramas desde otras herramientas, empezando por Enterprise Architect *(por definir)* | Importante |
+| RF007 | Interoperabilidad | Exportación de modelos y diagramas para su uso en otras herramientas *(por definir)* | Importante |
+| RF008 | Generación de artefactos | Generación de la base de datos PostgreSQL (scripts DDL y migraciones) a partir del modelo | Crítico |
+| RF009 | Generación de artefactos | Generación de un backend Spring Boot (entidades JPA, repositorios, servicios, controladores REST, DTOs, validaciones y configuración) a partir de diagramas de clases | Crítico |
+| RF010 | Generación de artefactos | Generación de la especificación OpenAPI de la API generada | Crítico |
+| RF011 | Colaboración | Edición colaborativa de diagramas en tiempo real | Crítico |
+| RF012 | Colaboración | Gestión de permisos por usuario y por proyecto (propietario, colaborador, lector), con herencia a los diagramas, invitaciones y revocación | Importante |
+| RF013 | Colaboración | Congelamiento de clases y diagramas: impedir su modificación hasta que se descongelen *(por definir)* | Importante |
+| RF014 | Colaboración | Almacenamiento y versionado de diagramas | Secundario |
+| RF015 | Adicionales | Auditoría e historial de cambios por usuario y por proyecto *(por confirmar)* | Secundario |
+| RF016 | Adicionales | Exportación de un proyecto completo en ZIP, con diagramas y código generado *(por confirmar)* | Secundario |
+| RF017 | Adicionales | Plantillas de proyecto *(por confirmar)* | Secundario |
+| RF018 | Adicionales | Roles a nivel de organización o equipo *(por confirmar)* | Secundario |
 
 ## 3. Requisitos no funcionales
 
@@ -35,10 +40,5 @@ ApollonCASE es una herramienta CASE para modelar sistemas de software con diagra
 | --- | --- | --- | --- |
 | RNF001 | Seguridad | Un usuario solo puede leer o modificar los proyectos y diagramas que sus permisos le permiten; al revocar un permiso, el acceso se corta también en las sesiones de edición colaborativa en curso | Crítico |
 | RNF002 | Usabilidad | Ningún cambio propuesto por IA se aplica al diagrama sin confirmación previa del usuario | Importante |
-| RNF003 | Fiabilidad | El proyecto generado debe compilar y ejecutarse sin intervención manual *(por confirmar)* | Importante |
-
-## 4. Decisiones pendientes
-
-- Proveedor de IA y de transcripción de voz (RF003).
-- Formato de intercambio y alcance de la importación desde Enterprise Architect (RF004).
-- Si los diagramas existentes fuera de un proyecto (locales o compartidos por enlace) se migran a proyectos o se mantienen como "sueltos" (RF002).
+| RNF003 | Compatibilidad | El proyecto generado debe compilar sin errores ni intervención manual en un entorno Java compatible con la versión de Java y de Spring Boot declaradas en el propio proyecto | Importante |
+| RNF004 | Privacidad | Las funciones de IA deben ejecutarse con un modelo local, sin enviar los modelos ni los mensajes del usuario a servicios externos | Importante |
