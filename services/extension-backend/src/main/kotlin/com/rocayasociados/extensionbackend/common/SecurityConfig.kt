@@ -28,6 +28,9 @@ class SecurityConfig(
             authorizeHttpRequests {
                 authorize("/v3/api-docs/**") { _, _ -> AuthorizationDecision(true) }
                 authorize("/swagger-ui/**") { _, _ -> AuthorizationDecision(true) }
+                // Container/Traefik healthcheck; only a bare UP/DOWN status is
+                // exposed (management.endpoint.health.show-details=never).
+                authorize("/actuator/health") { _, _ -> AuthorizationDecision(true) }
                 // A browser cannot set an Authorization header on a WS handshake; this
                 // endpoint authenticates via a short-lived, single-use ticket instead
                 // (see WsTicketService / DiagramRelayHandler), not the JWT filter.

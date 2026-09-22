@@ -1,8 +1,8 @@
 # extension-backend
 
-> **Estado: por construir.** Esta carpeta es un marcador de posición: aún no hay código, `pom.xml` ni imagen Docker. Este documento fija el propósito y la arquitectura de integración acordados.
+Backend **Spring Boot + PostgreSQL** que incorpora las funciones nuevas de ApollonCASE (ver el [Roadmap](../../README.md#roadmap-de-extensión)) y trabaja junto al servidor de Apollon, [`diagrams-backend`](../diagrams-backend/README.md), que sigue siendo el responsable de los diagramas y la colaboración en tiempo real sobre Redis. El código y la documentación OpenAPI de este servicio están en inglés.
 
-Backend **Spring Boot + PostgreSQL** que incorpora las funciones nuevas de ApollonCASE (ver el [Roadmap](../../README.md#roadmap-de-extensión)) y trabaja junto al servidor de Apollon, [`diagrams-backend`](../diagrams-backend/README.md), que sigue siendo el responsable de los diagramas y la colaboración en tiempo real sobre Redis. El código y la documentación OpenAPI de este servicio estarán en inglés.
+Se despliega mediante el `Dockerfile` de esta carpeta y `docker/compose.production.yml` de la raíz del repositorio, siguiendo el patrón de gateway (opción A, ver más abajo): es, junto con la webapp, el único servicio pensado para recibir un dominio público desde la plataforma de despliegue (ese compose no incluye proxy inverso propio, p. ej. se despliega detrás de Dokploy).
 
 ## Responsabilidades
 
@@ -14,7 +14,7 @@ Backend **Spring Boot + PostgreSQL** que incorpora las funciones nuevas de Apoll
 
 ## Arquitectura de integración
 
-`diagrams-backend` **no se modifica**. No tiene autenticación: el `diagramId` actúa como una capacidad (quien lo conoce puede leer, escribir y borrar el diagrama y unirse a su sala), la cookie de propietario es solo "fricción, no seguridad" y el relay WebSocket no distingue lectores de editores. Con permisos por usuario no puede quedar expuesto: vivirá en una red privada y todo acceso pasará por este servicio.
+`diagrams-backend` **no se modifica**. No tiene autenticación: el `diagramId` actúa como una capacidad (quien lo conoce puede leer, escribir y borrar el diagrama y unirse a su sala), la cookie de propietario es solo "fricción, no seguridad" y el relay WebSocket no distingue lectores de editores. Con permisos por usuario no puede quedar expuesto: en producción vive en una red Docker privada (`apollon-internal`) y todo acceso pasa por este servicio.
 
 ![Diagrama de contenedores de ApollonCASE](../../docs/architecture/ApollonCASE-containers.svg)
 
@@ -22,7 +22,7 @@ Componentes internos de este servicio:
 
 ![Diagrama de componentes de extension-backend](../../docs/architecture/ApollonCASE-extension-backend-components.svg)
 
-La webapp solo tendría que apuntar `VITE_SERVER_URL` y `VITE_SERVER_URL_WSS` (ya configurables) a este servicio y enviar el token; `library` y `diagrams-backend` no cambian.
+La webapp apunta `VITE_EXTENSION_SERVER_URL` (y su WebSocket derivado, ver `webapp/src/constants/urls.ts`) a este servicio y envía el token; `library` y `diagrams-backend` no cambian.
 
 ## Exposición de la API de diagramas
 

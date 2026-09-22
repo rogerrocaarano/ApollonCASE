@@ -13,7 +13,7 @@ Base para construir una herramienta CASE propia sobre [Apollon](https://github.c
 | [`webapp/`](webapp/README.md) | `@tumaet/webapp` | Aplicación web (React + Vite) que envuelve el editor: rutas, persistencia, compartición, historial de versiones. |
 | [`services/diagrams-backend/`](services/diagrams-backend/README.md) | `@tumaet/server` | Servidor de Apollon (Hono + Redis): API de diagramas, versiones, exportación y relay WebSocket de colaboración. |
 | [`services/extension-backend/`](services/extension-backend/README.md) | — | **Por construir.** Backend Spring Boot + PostgreSQL con las nuevas funciones (ver [Roadmap](#roadmap-de-extensión)). |
-| [`docker/`](docker) | — | Archivos Docker Compose (`compose.local*.yml` en uso; `compose.app/db/proxy.yml` son de producción heredados de Apollon y aún no se usan). |
+| [`docker/`](docker) | — | Archivos Docker Compose: `compose.local*.yml` para desarrollo; `compose.production.yml` para producción (`webapp`/`extension-backend` en una red, `diagrams-backend`/Redis/Postgres en una red privada aparte; sin proxy inverso incluido — pensado para desplegarse detrás de Dokploy u otra plataforma que lo aporte). Ver `docker/.env.example` para las variables de despliegue. |
 | [`scripts/`](scripts/README.md) | — | Scripts de lanzamiento para Docker y desarrollo local (bash y PowerShell). |
 | `nginx.conf` | — | Configuración de nginx de la imagen Docker de la webapp. |
 
@@ -65,7 +65,7 @@ npm run storybook --workspace=@tumaet/webapp             # Storybook (editor + @
 
 ## Arquitectura objetivo
 
-`services/diagrams-backend` **no se modifica** y no tiene autenticación: conocer el identificador de un diagrama basta para leerlo, escribirlo, borrarlo o unirse a su sala de colaboración. Por eso, cuando existan usuarios y permisos, quedará en una red privada y todo el acceso pasará por `services/extension-backend`, que actuará como puerta de entrada única.
+`services/diagrams-backend` **no se modifica** y no tiene autenticación: conocer el identificador de un diagrama basta para leerlo, escribirlo, borrarlo o unirse a su sala de colaboración. Por eso, en producción (`docker/compose.production.yml`) queda en una red Docker privada (`apollon-internal`, sin salida pública) junto con Redis y PostgreSQL, y todo el acceso pasa por `services/extension-backend`, que actúa como puerta de entrada única y es, junto con la webapp, el único servicio pensado para recibir un dominio público (asignado por la plataforma de despliegue, p. ej. Dokploy).
 
 ### Diagramas C4
 
@@ -83,7 +83,7 @@ npm run storybook --workspace=@tumaet/webapp             # Storybook (editor + @
 
 El modelo C4 de ApollonCASE (contexto, contenedores y componentes) se documenta en [docs/architecture](docs/architecture): `model.json` y `llms.txt` son exports de IcePanel filtrados a este proyecto. Para actualizarlos, vuelve a exportar desde IcePanel y filtra de nuevo lo que no pertenezca a ApollonCASE.
 
-El análisis de alternativas y sus tradeoffs está en [services/extension-backend/README.md](services/extension-backend/README.md#exposición-de-la-api-de-diagramas). Los compose actuales aún no aíslan el backend; eso llegará con `extension-backend`.
+El análisis de alternativas y sus tradeoffs está en [services/extension-backend/README.md](services/extension-backend/README.md#exposición-de-la-api-de-diagramas). Keycloak no forma parte de ningún compose de este repositorio: `extension-backend` y la webapp reciben su URL (`issuer-uri` / `VITE_KEYCLOAK_*`) por variable de entorno, apuntando a un Keycloak desplegado y administrado por separado.
 
 ## Roadmap de extensión
 

@@ -76,3 +76,15 @@ Rollback: revert the compose/Dockerfile/doc changes. Since `diagrams-backend` an
 ## Open Questions
 
 None - the two decisions that would have changed this design's approach (diagrams-backend's public exposure, and whether Postgres is containerized here) were resolved with the user before writing this document.
+
+## Post-Implementation Revision: no Traefik, single compose file
+
+After implementing and verifying everything above, the user decided against running Traefik in this repo at all - the deployment target is Dokploy, which supplies its own reverse proxy and domain routing externally. This section records what changed and why; the decisions above (network segmentation, Actuator health check, Dockerfile shape, Postgres containerization, Keycloak decoupling) are otherwise unaffected and still describe the actual implementation.
+
+**Removed:** the `reverse-proxy`/`maintenance` services, every `traefik.*` label, and `ACME_EMAIL`/`APP_HOSTNAME`/`APP_HOSTNAME_ALIASES_RULE`. `webapp` and `extension-backend` now only `expose` port 8080 - no `ports:` mapping - since the deploying platform is expected to attach its own proxy to them by service name/port rather than this repo terminating TLS itself.
+
+**Consolidated to one file:** `compose.proxy.yml` + `compose.db.yml` + `compose.app.yml` became a single `docker/compose.production.yml`. This wasn't only a preference - it fixes a real problem hit during task 4.4's verification: those three files could never be brought up together in one `docker compose up` command, because Docker Compose's network-merge rule makes a network `external: true` for the *entire merged config* the instant any one of the passed files declares it so, even the file that owns/creates it. The working sequence required three separate `up` invocations (documented at the time in `.env.example`/README). With everything in one file, `apollon-network` and `apollon-internal` are simply declared and owned there directly - no `external: true` anywhere, no ordering constraint, one `docker compose -f compose.production.yml up -d --build` brings up all five services.
+
+**Not reopened:** whether to isolate `diagrams-backend`'s network, whether to containerize Postgres, and the Actuator-based health check are all unchanged from the original decisions - Dokploy has no bearing on any of them.
+
+Re-verified with a real `docker compose up` (not just `config`): all five services (`redis`, `postgres`, `server`, `extension-backend`, `webapp`) reach `healthy`; `docker port docker-server-1` shows nothing published; `docker exec webapp wget http://server:8000` fails DNS resolution; `docker exec extension-backend wget http://server:8000/health` succeeds; hitting extension-backend's own exposed port directly returns `401` for `/api/v1/me` (auth still enforced, no proxy needed to observe this).
