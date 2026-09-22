@@ -122,11 +122,17 @@ services:
         max-size: "50m"
         max-file: "5"
 
-  # diagrams-backend (Apollon's own server). Not publicly exposed at all - see
-  # extension-backend below, which is the only path the webapp uses to reach
-  # it. Kept on apollon-internal only, alongside its Redis and Postgres.
+  # diagrams-backend (Apollon's own server, unmodified in this fork - see
+  # root README.md - built from source here for the same reason webapp/
+  # extension-backend are: the deployed image should be exactly what's
+  # checked into this repo, not whatever ghcr.io last published). Not
+  # publicly exposed at all - see extension-backend below, which is the only
+  # path the webapp uses to reach it. Kept on apollon-internal only,
+  # alongside its Redis and Postgres.
   server:
-    image: "ghcr.io/ls1intum/apollon/server:${IMAGE_TAG:-latest}"
+    build:
+      context: ..
+      dockerfile: ./services/diagrams-backend/Dockerfile
     restart: unless-stopped
     expose:
       - "8000"
