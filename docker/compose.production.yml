@@ -64,7 +64,21 @@ services:
         max-file: "5"
 
   webapp:
-    image: "ghcr.io/ls1intum/apollon/webapp:${IMAGE_TAG:-latest}"
+    # Built from this repo's own source, unlike `server` below - the webapp
+    # carries ApollonCASE-specific code (Keycloak login, projects, sharing)
+    # that upstream Apollon's ghcr.io image doesn't have.
+    build:
+      context: ..
+      dockerfile: ./webapp/Dockerfile
+      args:
+        # Vite build-time only - see webapp/Dockerfile's own comment on why
+        # these can't be plain `environment:` entries below. Required: a
+        # webapp built without them can't log in or reach extension-backend
+        # (see webapp/src/constants/{auth,urls}.ts - no same-origin fallback
+        # works once webapp/extension-backend are on different domains).
+        - VITE_KEYCLOAK_AUTHORITY=${VITE_KEYCLOAK_AUTHORITY:?VITE_KEYCLOAK_AUTHORITY must be set}
+        - VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID:-apolloncase-webapp}
+        - VITE_EXTENSION_SERVER_URL=${VITE_EXTENSION_SERVER_URL:?VITE_EXTENSION_SERVER_URL must be set}
     restart: unless-stopped
     expose:
       - "8080"
